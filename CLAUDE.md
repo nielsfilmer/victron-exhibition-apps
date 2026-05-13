@@ -150,19 +150,22 @@ The Victron design system file (referenced earlier in the build) is
   `fullscreen` variant fades out the sinus via
   `body.fullscreen-current #sinus-bg { opacity: 0 }`.
 - **Image position for small variants** (`default` and `text-right`)
-  uses the Figma 6437:465 margins — 47 px from the appropriate
-  horizontal edge, 71 px from top, 1204×815 box (`right/left: 2.448vw;
-  top: 3.698vw; width: var(--img-w); height: var(--img-h)`). The two
-  variants are horizontally mirrored copies of the same rule. At the
-  16:9 production targets (1920×1080 and 3840×2160) the image bottom
-  lands ~50 px above the controls top. At non-16:9 dev viewports
-  (e.g. very short screens) this can overlap controls — accepted
-  trade-off; the kiosk targets are 16:9.
-- **`.slide-img` uses `object-fit: contain`**, not `cover`. The image
-  fills the image-frame box along the axis that fits its aspect and
-  leaves whitespace on the other axis. Source images are not cropped.
-  Don't switch back to `cover` without an explicit ask — the
-  whitespace is intentional.
+  uses the Figma 6437:465 box size (1204×815 → `var(--img-w)`/
+  `var(--img-h)`) at 47 px from the appropriate horizontal edge.
+  The vertical position is centred in the space above the controls
+  cluster:
+  `top: calc((100vh - var(--controls-zone) - var(--img-h)) / 2)`
+  where `--controls-zone = pad-edge + btn-size = 7.5vw`. So the
+  gap above the image equals the gap between image and controls
+  top — regardless of viewport height. `large-image` and
+  `fullscreen` are unaffected; their positioning is independent.
+- **`object-fit` is per-variant.** Default rule on `.slide-img` is
+  `cover`, which `large-image` and `fullscreen` use (they're sized
+  to dominate the layout, cropping is acceptable). The two
+  small-image variants override to `contain` so source images are
+  letterboxed, not cropped — the sinus pattern shows through where
+  the image doesn't fill the frame. Don't widen the override to all
+  variants without an explicit ask.
 - **Title is split into per-word `<span class="word">` spans** during
   build. After `document.fonts.ready` resolves, words are grouped into
   lines by their `getBoundingClientRect().top` and each word gets a
@@ -248,14 +251,15 @@ The Victron design system file (referenced earlier in the build) is
    paths; hand-copying frequently drops paths. Load the file via
    `<img src="media/sinus-bg.svg">` so the on-disk asset stays the
    single source of truth.
-5. **Small-image variants use Figma-exact `top: 3.698vw`** — see the
-   architecture section above. Earlier iterations replaced this with
-   a `calc((100vh - var(--controls-zone) - var(--img-h)) / 2)` so the
-   image always cleared the controls at any viewport height, but
-   stakeholder direction is to use the Figma margins verbatim. At
-   non-16:9 dev viewports the image can dip into the controls zone —
-   accepted trade-off for the 16:9 kiosk targets. **Do not reintroduce
-   the calc** as a "fix" without an explicit ask.
+5. **Small-image variants centre vertically above the controls** —
+   see the architecture section above. The frame uses the Figma
+   6437:465 box size (1204×815), but the vertical position is
+   `calc((100vh - var(--controls-zone) - var(--img-h)) / 2)` rather
+   than Figma's literal `top: 71px`. This was tried both ways during
+   the build: Figma-exact only works at 1920×1080; the calc keeps the
+   image clear of the controls and symmetrically padded at any
+   viewport height. **Don't replace the calc with a fixed `top`**
+   without an explicit ask.
 6. **Use `vw` for vertical dimensions too**, not `vh`. The design is
    16:9 and the production targets are all 16:9; using `vw` everywhere
    keeps proportions locked to the 1920×1080 design pixel values.

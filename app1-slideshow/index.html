@@ -37,11 +37,15 @@
     --text-panel-w:     23.073vw;    /* 443px @ 1920w */
     --text-panel-top:   12.604vw;    /* 242px @ 1920w */
 
-    /* Small-image frame size — matches Figma 6437:465's 1204×815 box.
-       Position rules (3.698vw top, 2.448vw side inset) are inlined per
-       variant rather than aliased here. */
+    /* Small-image frame size — Figma 6437:465's 1204×815 box. */
     --img-w:            62.694vw;    /* 1203.72px @ 1920w */
     --img-h:            42.337vw;    /* 814.88px @ 1920w */
+
+    /* Vertical zone reserved at the bottom for the controls cluster:
+       pad-edge (bottom inset) + btn-size (button height) = 7.5vw @1920w.
+       Used by the small-image variants to centre the image in the space
+       above the controls. */
+    --controls-zone:    calc(var(--pad-edge) + var(--btn-size));
 
     --transition-ms:    700ms;
     --ease:             cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -120,10 +124,12 @@
   }
   .slide-img {
     width: 100%; height: 100%;
-    /* `contain` (not `cover`) — fills the available space along the axis
-       that fits, leaves whitespace on the other axis. The image is never
-       cropped; aspect ratio is preserved. */
-    object-fit: contain;
+    /* Default: `cover` — image fills the frame, cropping if needed.
+       Used by `large-image` (where the frame is sized to dominate the
+       layout) and `fullscreen` (where the frame is the whole viewport).
+       The small-image variants override below to `contain` so source
+       images are never cropped. */
+    object-fit: cover;
     display: block;
     opacity: 0;
     transform: scale(1.02);
@@ -133,6 +139,10 @@
     will-change: opacity, transform;
   }
   .slide.is-current .slide-img { opacity: 1; transform: scale(1); }
+  /* Small-image variants letterbox rather than crop, so the sinus pattern
+     shows through where the image doesn't fill the frame. */
+  .slide.variant-default    .slide-img,
+  .slide.variant-text-right .slide-img { object-fit: contain; }
 
   .slide-text {
     display: flex;
@@ -142,13 +152,15 @@
   }
 
   /* ----- Variant: default — image right, text left.
-           Image-frame uses the Figma 6437:465 margins, mirrored to the right
-           edge: 47px from the right, 71px from top, 1204×815 box. The image
-           inside uses `object-fit: contain` so it fills width OR height
-           (whichever fits its aspect) without being cropped. ----- */
+           Image-frame size from Figma 6437:465 (1204×815) anchored 47px
+           from the right edge. The frame is centred vertically in the
+           space ABOVE the controls cluster — so the gap above the image
+           equals the gap below it (between image bottom and controls top).
+           The image inside uses `object-fit: contain` so it isn't
+           cropped. ----- */
   .slide.variant-default .slide-img-frame {
     right: 2.448vw;                /* 47px @ 1920w (mirror of text-right) */
-    top:   3.698vw;                /* 71px @ 1920w (Figma 6437:465) */
+    top:   calc((100vh - var(--controls-zone) - var(--img-h)) / 2);
     width:  var(--img-w);          /* 1204px @ 1920w */
     height: var(--img-h);          /* 815px @ 1920w */
   }
@@ -195,11 +207,12 @@
     z-index: 2;
   }
 
-  /* ----- Variant: text-right — image left, text right (Figma 6437:465 exact).
-           Same image-frame box as `default`, just anchored to the left edge. ----- */
+  /* ----- Variant: text-right — image left, text right.
+           Same image-frame box and vertical centring rule as `default`,
+           just anchored to the left edge. ----- */
   .slide.variant-text-right .slide-img-frame {
     left: 2.448vw;                 /* 47px @ 1920w (Figma 6437:465) */
-    top:  3.698vw;                 /* 71px @ 1920w (Figma 6437:465) */
+    top:  calc((100vh - var(--controls-zone) - var(--img-h)) / 2);
     width:  var(--img-w);          /* 1204px @ 1920w */
     height: var(--img-h);          /* 815px @ 1920w */
   }
