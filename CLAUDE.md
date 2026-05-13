@@ -1,5 +1,19 @@
 # Claude project notes — Victron exhibition apps
 
+> ## ⚠️ Top-line principle (load-bearing for every change)
+>
+> **This is a local-only app that must run fully offline on the latest
+> version of Google Chrome.** No internet connection at runtime, no CDN
+> fonts, no remote assets, no analytics, no `fetch()` calls. The kiosk
+> Mac runs the latest stable Chrome on the latest macOS — that's the
+> only supported runtime.
+>
+> Every code review (human or agent-spawned) **must** apply this as the
+> primary lens. Any change that introduces a network call, a build
+> step, a server requirement, or a dependency on a browser other than
+> current-stable Chrome is automatically a blocking issue and must be
+> rejected or rewritten — regardless of how convenient it is.
+
 Persistent context for future Claude sessions on this repo. Read this first
 before making changes.
 

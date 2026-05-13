@@ -3,6 +3,18 @@
 Two standalone HTML kiosk apps for touchscreen TVs at the Intersolar exhibition,
 plus scripts to boot a Mac into either app in Chrome kiosk mode.
 
+> ## Runtime environment
+>
+> **This is a local-only app. It is designed to run fully offline on the
+> latest version of Google Chrome.** Once a folder is on the kiosk Mac, no
+> internet connection is required — there are no CDN fonts, no remote
+> assets, no analytics, and no runtime `fetch()` calls. Both apps target
+> the current stable Chrome release on macOS Sequoia (15.x); older
+> browsers and other engines are not supported and not tested.
+>
+> Any code review or future change must preserve this principle: zero
+> network calls at runtime, no build step, no server.
+
 ```
 intersolar-tv-apps/
 ├── app1-slideshow/      # Slideshow with countdown + pause (Victron-styled)
