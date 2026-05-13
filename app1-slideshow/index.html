@@ -160,15 +160,15 @@
     z-index: 2;
   }
 
-  /* ----- Variant: large-image — image fills more of screen with rounded corners
-           (Figma 6428:13078 → right=45, top=54, w=1308, h=955 in 1920×1080) ----- */
+  /* ----- Variant: large-image — image fills more of screen with sharp corners.
+           Figma 6428:13078 specifies a 24px corner radius; the kiosk variant
+           drops it per stakeholder direction. ----- */
   .slide.variant-large-image .slide-img-frame {
     right: 2.344vw;                /* 45px @ 1920w */
     top: 50%;
     transform: translateY(-50%);
     width: 68.125vw;               /* 1308px @ 1920w */
     height: 49.74vw;               /* 955px @ 1920w */
-    border-radius: 1.25vw;         /* 24px @ 1920w */
   }
   .slide.variant-large-image .slide-text {
     position: absolute;

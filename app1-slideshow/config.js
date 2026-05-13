@@ -18,7 +18,7 @@
 //                navigates manually.
 //   variant   — layout variant. One of:
 //                 "default"      → media right (~63% wide), text top-left, sinus bg
-//                 "large-image"  → media fills right with rounded corners, text top-left, sinus bg
+//                 "large-image"  → media fills right (larger, sharp corners), text top-left, sinus bg
 //                 "text-right"   → media left, text top-right, sinus bg
 //                 "fullscreen"   → media fills entire screen, no text, no sinus bg
 //               omit `variant` for "default".
