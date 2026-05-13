@@ -298,6 +298,7 @@
   }
 
   .ctrl-btn {
+    position: relative;                            /* positioning context for inner countdown ring */
     width: var(--btn-size);
     height: var(--btn-size);
     border-radius: 100px;
@@ -310,7 +311,9 @@
     transition: transform 120ms var(--ease), filter 200ms var(--ease);
   }
   .ctrl-btn:active { transform: scale(0.95); filter: brightness(0.9); }
-  .ctrl-btn svg { width: 41.67%; height: 41.67%; display: block; }   /* 40px in 96px */
+  /* The 40px-in-96px icon sizing applies only to in-button icons, not to the
+     countdown ring (which is full-button-sized). */
+  .ctrl-btn > svg:not(#countdown-ring) { width: 41.67%; height: 41.67%; display: block; }
 
   /* Pagination text */
   #pagination {
@@ -323,16 +326,11 @@
     white-space: nowrap;
   }
 
-  /* NEXT button + countdown ring (no permanent track — only the progress arc) */
+  /* NEXT button + countdown ring (no permanent track — only the progress arc).
+     The ring lives *inside* the button so it inherits the button's `:active`
+     scale animation (and paints on top of the blue, which siblings wouldn't). */
   #next-wrap {
-    position: relative;
-    width: var(--btn-size);
-    height: var(--btn-size);
     flex-shrink: 0;
-  }
-  #next-wrap .ctrl-btn {
-    width: 100%;
-    height: 100%;
   }
   /* Countdown ring sits ENTIRELY inside the button, with its outer edge flush
      against the button's outer edge. The SVG matches the button's box; the
@@ -340,6 +338,7 @@
   #countdown-ring {
     position: absolute;
     inset: 0;
+    width: 100%; height: 100%;
     pointer-events: none;
     transform: rotate(-90deg);
   }
@@ -391,13 +390,16 @@
       </div>
 
       <div id="next-wrap">
-        <svg id="countdown-ring" viewBox="0 0 100 100" aria-hidden="true">
-          <!-- r=47.5 with stroke-width=5 fits the stroke entirely INSIDE the
-               button: stroke spans SVG r=45..50 (= display r=43.2..48 on the
-               96px button), so its outer edge is flush with the button edge. -->
-          <circle class="progress" cx="50" cy="50" r="47.5"/>
-        </svg>
         <button class="ctrl-btn" id="next-btn" aria-label="Next slide">
+          <!-- Countdown ring is nested INSIDE the button so it inherits the
+               button's `:active` scale animation and paints on top of the
+               blue fill. r=47.5 with stroke-width=5 fits the stroke entirely
+               inside the button: stroke spans SVG r=45..50 (= display
+               r=43.2..48 on the 96px button), so its outer edge is flush
+               with the button edge. -->
+          <svg id="countdown-ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="progress" cx="50" cy="50" r="47.5"/>
+          </svg>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="12" x2="20" y2="12"/>
             <polyline points="13 5 20 12 13 19"/>
