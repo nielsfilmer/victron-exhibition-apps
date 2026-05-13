@@ -54,7 +54,7 @@ Implements the UX from
 | `variant` | Media (image or video) | Text | Sinus bg | Figma |
 |---|---|---|---|---|
 | `default` (omitted) | Right (~63% wide, centered) | Top-left (443 px) | Yes | [6428:12910](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-12910) |
-| `large-image` | Right, larger (68% wide, 24 px rounded corners) | Top-left | Yes | [6428:13078](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-13078) |
+| `large-image` | Right, larger (68% wide, sharp corners — deviates from Figma's 24 px radius per stakeholder direction) | Top-left | Yes | [6428:13078](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-13078) |
 | `text-right` | Left (mirror of default) | Top-right (left=1368 px) | Yes | [6437:465](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6437-465) |
 | `fullscreen` | Fills the whole screen | none | **No** (hidden via opacity transition) | — |
 
