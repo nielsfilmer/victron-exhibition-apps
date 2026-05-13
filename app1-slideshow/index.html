@@ -334,14 +334,14 @@
     width: 100%;
     height: 100%;
   }
-  /* Countdown ring sits on the outer edge of the button (no visible gap to the
-     button; the stroke straddles the button's edge so it reads as connected). */
+  /* Countdown ring sits ENTIRELY inside the button, with its outer edge flush
+     against the button's outer edge. The SVG matches the button's box; the
+     stroke fits inside that box (no overflow needed). */
   #countdown-ring {
     position: absolute;
     inset: 0;
     pointer-events: none;
     transform: rotate(-90deg);
-    overflow: visible;
   }
   #countdown-ring .progress {
     fill: none;
@@ -392,9 +392,10 @@
 
       <div id="next-wrap">
         <svg id="countdown-ring" viewBox="0 0 100 100" aria-hidden="true">
-          <!-- r=51 with stroke-width=5 puts the stroke straddling the 96px button's
-               outer edge (display r ≈ 46 → 51), so the ring reads as connected. -->
-          <circle class="progress" cx="50" cy="50" r="51"/>
+          <!-- r=47.5 with stroke-width=5 fits the stroke entirely INSIDE the
+               button: stroke spans SVG r=45..50 (= display r=43.2..48 on the
+               96px button), so its outer edge is flush with the button edge. -->
+          <circle class="progress" cx="50" cy="50" r="47.5"/>
         </svg>
         <button class="ctrl-btn" id="next-btn" aria-label="Next slide">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -601,7 +602,7 @@
   // Countdown ring — only the progress arc (no permanent track).
   // RING_R must match the <circle r="…"> in the markup; otherwise the dasharray
   // won't fully cover the path at start and a small arc is visible at f=0.
-  const RING_R = 51;
+  const RING_R = 47.5;
   const RING_C = 2 * Math.PI * RING_R;
   ringProg.style.strokeDasharray  = RING_C;
   ringProg.style.strokeDashoffset = RING_C;       // start: empty (ring "fills" as time elapses)
