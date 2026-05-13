@@ -166,6 +166,13 @@ The Victron design system file (referenced earlier in the build) is
   letterboxed, not cropped — the sinus pattern shows through where
   the image doesn't fill the frame. Don't widen the override to all
   variants without an explicit ask.
+- **Videos use `background: transparent`.** `<video>` has a black
+  user-agent default background that bleeds through the letterbox
+  bars when the video's aspect doesn't match the frame. Setting
+  `background: transparent` on `.slide-img` (which both `<img>` and
+  `<video>` share) makes the bars consistent with images — the
+  sinus pattern shows through both. Don't remove the rule; the
+  black bars would come back for videos only.
 - **Title is split into per-word `<span class="word">` spans** during
   build. After `document.fonts.ready` resolves, words are grouped into
   lines by their `getBoundingClientRect().top` and each word gets a
