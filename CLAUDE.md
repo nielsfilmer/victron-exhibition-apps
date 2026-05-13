@@ -194,6 +194,15 @@ The Victron design system file (referenced earlier in the build) is
   indefinitely until manual navigation" — same semantics as the global.
   The value is captured into `currentMs` at countdown start so a
   mid-flight slide-config change can't drift the in-progress ring.
+- **`controlsAlign` global config** — `"left"` (default) or `"right"`.
+  JS reads it once at boot and adds `body.controls-right` when set to
+  `"right"`. CSS swaps the `left`/`right` anchor on `#controls` via the
+  class selector. Cluster order (back → pagination → next → pause) is
+  preserved either way. **Beware:** the `large-image` variant's image
+  area extends across the bottom-right; pairing `controlsAlign:
+  "right"` with that variant means the controls sit on top of the
+  image. Documented in the README and config comments — don't
+  auto-correct it.
 - **Swipe** is bound to the whole `#stage` element with pointerId
   tracking. Threshold: `max(60px, 4% of viewport width)`, max duration
   600 ms, requires `|dx| > 1.2 × |dy|`. Control buttons stop

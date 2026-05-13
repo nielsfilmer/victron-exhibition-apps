@@ -244,16 +244,23 @@
   }
 
   /* ===========================================================
-     Controls cluster (bottom-left): back, "X / Y", next+ring, pause
+     Controls cluster: back, "X / Y", next+ring, pause.
+     Defaults to bottom-left; flip with `controlsAlign: "right"` in config.
+     Cluster order (back → pagination → next → pause) is preserved either way.
      =========================================================== */
   #controls {
     position: absolute;
     left: var(--pad-edge);
+    right: auto;
     bottom: var(--pad-edge);
     display: flex;
     align-items: center;
     gap: var(--gap-controls);
     z-index: 3;
+  }
+  body.controls-right #controls {
+    left: auto;
+    right: var(--pad-edge);
   }
 
   .ctrl-btn {
@@ -414,6 +421,12 @@
   const autoAdvanceMs = (typeof ss.autoAdvanceMs === 'number') ? ss.autoAdvanceMs : 8000;
   const pauseMinutes  = cfg.pauseMinutes != null ? cfg.pauseMinutes : 5;
   const pauseMs       = Math.max(0, pauseMinutes) * 60 * 1000;
+
+  // Controls cluster alignment — "left" (default) or "right". Anything else
+  // falls back to "left". Applied once at boot via a body class; the
+  // back→pagination→next→pause order is preserved either way.
+  const controlsAlign = cfg.controlsAlign === 'right' ? 'right' : 'left';
+  if (controlsAlign === 'right') document.body.classList.add('controls-right');
 
   document.documentElement.style.setProperty('--transition-ms', transitionMs + 'ms');
 

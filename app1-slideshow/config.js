@@ -34,6 +34,14 @@
 //                              button is pressed; after this elapses the countdown
 //                              starts over from empty (default 5; set 0 to pause
 //                              indefinitely until manually resumed).
+//   controlsAlign            — "left" (default) or "right". Pins the controls
+//                              cluster (back / X-of-Y / next+ring / pause) to
+//                              the bottom-left or bottom-right of the screen.
+//                              Cluster order is preserved either way.
+//                              Note: the `large-image` variant's image extends
+//                              into the bottom-right zone — pair it with
+//                              "left" if you don't want the controls to sit on
+//                              top of the image.
 window.APP_CONFIG = {
   slideshow: {
     images: [
@@ -89,5 +97,6 @@ window.APP_CONFIG = {
     autoAdvanceMs: 8000,
     transitionMs:  700
   },
-  pauseMinutes: 5
+  pauseMinutes:  5,
+  controlsAlign: "left"
 };

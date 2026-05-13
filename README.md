@@ -61,7 +61,7 @@ Implements the UX from
 All four variants share the controls cluster (back / `current/total` / next +
 countdown ring / pause) in the bottom-left.
 
-**Controls cluster** (bottom of the text panel, left → right):
+**Controls cluster** — anchored bottom-left by default; flip to bottom-right with `controlsAlign: "right"` in the config. The button order (left → right) is preserved either way:
 - **Back** circle button — previous slide (wraps from slide 1 to last).
 - **Pagination text** — `current / total` (e.g. `3 / 5`).
 - **Next** circle button with a **countdown ring** drawn around it. The ring
@@ -94,7 +94,8 @@ window.APP_CONFIG = {
     autoAdvanceMs: 8000,
     transitionMs:  700
   },
-  pauseMinutes: 5
+  pauseMinutes:  5,
+  controlsAlign: "left"
 };
 ```
 
@@ -105,6 +106,7 @@ window.APP_CONFIG = {
 | `slideshow.autoAdvanceMs` | Default duration of the countdown ring; how long until the slide auto-advances (default `8000`). Individual slides can override this via `images[].autoAdvanceMs`. |
 | `slideshow.transitionMs` | Crossfade duration between slides (default `700`). |
 | `pauseMinutes` | Minutes to keep the slideshow paused after the pause button is pressed (default `5`). After this elapses the countdown starts over from empty. Set to `0` to keep paused indefinitely until manually resumed. |
+| `controlsAlign` | `"left"` (default) or `"right"`. Pins the controls cluster to the bottom-left or bottom-right of the screen. The button order is preserved either way. Note that the `large-image` variant's image extends across the bottom-right area — pair it with `"left"` if you don't want the controls overlaying the image. |
 
 ---
 
