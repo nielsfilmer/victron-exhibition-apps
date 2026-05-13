@@ -37,15 +37,11 @@
     --text-panel-w:     23.073vw;    /* 443px @ 1920w */
     --text-panel-top:   12.604vw;    /* 242px @ 1920w */
 
-    /* Image area — matches the gx_frame_dark position (601, 121) 1203.7×814.9 in design */
-    --img-left:         31.302vw;    /* 601px @ 1920w */
-    --img-top:          6.302vw;     /* 121px @ 1920w */
+    /* Small-image frame size — matches Figma 6437:465's 1204×815 box.
+       Position rules (3.698vw top, 2.448vw side inset) are inlined per
+       variant rather than aliased here. */
     --img-w:            62.694vw;    /* 1203.72px @ 1920w */
     --img-h:            42.337vw;    /* 814.88px @ 1920w */
-
-    /* Vertical zone reserved at the bottom for the controls cluster:
-       pad-edge (bottom inset) + btn-size (button height) = 7.5vw @1920w. */
-    --controls-zone:    calc(var(--pad-edge) + var(--btn-size));
 
     --transition-ms:    700ms;
     --ease:             cubic-bezier(0.22, 0.61, 0.36, 1);

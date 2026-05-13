@@ -248,9 +248,14 @@ The Victron design system file (referenced earlier in the build) is
    paths; hand-copying frequently drops paths. Load the file via
    `<img src="media/sinus-bg.svg">` so the on-disk asset stays the
    single source of truth.
-5. **Don't use a fixed-pixel `top` on small-image variants.** It only
-   works at exactly 1080 viewport height. Use the
-   centered-above-controls calc (see above).
+5. **Small-image variants use Figma-exact `top: 3.698vw`** — see the
+   architecture section above. Earlier iterations replaced this with
+   a `calc((100vh - var(--controls-zone) - var(--img-h)) / 2)` so the
+   image always cleared the controls at any viewport height, but
+   stakeholder direction is to use the Figma margins verbatim. At
+   non-16:9 dev viewports the image can dip into the controls zone —
+   accepted trade-off for the 16:9 kiosk targets. **Do not reintroduce
+   the calc** as a "fix" without an explicit ask.
 6. **Use `vw` for vertical dimensions too**, not `vh`. The design is
    16:9 and the production targets are all 16:9; using `vw` everywhere
    keeps proportions locked to the 1920×1080 design pixel values.
