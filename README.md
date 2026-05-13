@@ -106,7 +106,7 @@ window.APP_CONFIG = {
 | `slideshow.autoAdvanceMs` | Default duration of the countdown ring; how long until the slide auto-advances (default `8000`). Individual slides can override this via `images[].autoAdvanceMs`. |
 | `slideshow.transitionMs` | Crossfade duration between slides (default `700`). |
 | `pauseMinutes` | Minutes to keep the slideshow paused after the pause button is pressed (default `5`). After this elapses the countdown starts over from empty. Set to `0` to keep paused indefinitely until manually resumed. |
-| `controlsAlign` | `"left"` (default) or `"right"`. Pins the controls cluster to the bottom-left or bottom-right of the screen. The button order is preserved either way. Note that the `large-image` variant's image extends across the bottom-right area — pair it with `"left"` if you don't want the controls overlaying the image. |
+| `controlsAlign` | `"left"` (default) or `"right"`. Pins the controls cluster to the bottom-left or bottom-right of the screen. The button order is preserved either way. When set to `"right"`, the `large-image` variant auto-flips its image to the left edge so the controls don't sit on top of it. |
 
 ---
 

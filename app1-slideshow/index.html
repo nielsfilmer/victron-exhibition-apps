@@ -162,13 +162,21 @@
 
   /* ----- Variant: large-image — image fills more of screen with sharp corners.
            Figma 6428:13078 specifies a 24px corner radius; the kiosk variant
-           drops it per stakeholder direction. ----- */
+           drops it per stakeholder direction. By default the image is flushed
+           to the right edge; when the controls cluster is on the right
+           (`controlsAlign: "right"` → `body.controls-right`) the image flips
+           to the left edge so the controls don't sit on top of it. ----- */
   .slide.variant-large-image .slide-img-frame {
     right: 2.344vw;                /* 45px @ 1920w */
+    left: auto;
     top: 50%;
     transform: translateY(-50%);
     width: 68.125vw;               /* 1308px @ 1920w */
     height: 49.74vw;               /* 955px @ 1920w */
+  }
+  body.controls-right .slide.variant-large-image .slide-img-frame {
+    right: auto;
+    left: 2.344vw;
   }
   .slide.variant-large-image .slide-text {
     position: absolute;
