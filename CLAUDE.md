@@ -187,6 +187,13 @@ The Victron design system file (referenced earlier in the build) is
   reset to `currentTime = 0` and `play()` is called; on slide-leave
   `pause()` is called — videos never run in the background. The
   `.slide-img` CSS class is shared by both element types.
+- **Per-slide `autoAdvanceMs`** — slides may set their own
+  `autoAdvanceMs` to override `slideshow.autoAdvanceMs` for that slide
+  only. `effectiveAutoAdvanceMs(i)` returns the per-slide value if it's
+  a number, otherwise the global. `0` (or negative) means "stay
+  indefinitely until manual navigation" — same semantics as the global.
+  The value is captured into `currentMs` at countdown start so a
+  mid-flight slide-config change can't drift the in-progress ring.
 - **Swipe** is bound to the whole `#stage` element with pointerId
   tracking. Threshold: `max(60px, 4% of viewport width)`, max duration
   600 ms, requires `|dx| > 1.2 × |dy|`. Control buttons stop

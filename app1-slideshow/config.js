@@ -11,6 +11,11 @@
 //               (preload="metadata" keeps the per-video memory cost low).
 //   loop      — videos only. `false` plays once and stops on the last
 //                frame; default is `true` (loop until slide changes).
+//   autoAdvanceMs — optional per-slide duration in ms. Overrides the
+//                global `slideshow.autoAdvanceMs` for this slide only.
+//                Use a longer value to let viewers dwell on info-dense
+//                slides, or `0` to make a slide stay until the viewer
+//                navigates manually.
 //   variant   — layout variant. One of:
 //                 "default"      → media right (~63% wide), text top-left, sinus bg
 //                 "large-image"  → media fills right with rounded corners, text top-left, sinus bg
@@ -55,16 +60,20 @@ window.APP_CONFIG = {
         subtitle: "From a single Lithium Smart battery to a multi-MWh BESS",
         body:     "The same Victron components scale up. Add capacity later without redesigning the system, and keep using the same configuration tools and dashboards."
       },
-      // Fullscreen — image fills the entire screen, no text, no sinus background
+      // Fullscreen — image fills the entire screen, no text, no sinus background.
+      // Lingers 12s on this slide instead of the global 8s (per-slide override).
       {
-        src:      "media/slide-4.jpg",
-        variant:  "fullscreen"
+        src:           "media/slide-4.jpg",
+        variant:       "fullscreen",
+        autoAdvanceMs: 12000
       },
       // VIDEO slide — muted, looped, plays from frame 0 every time the slide
       // becomes current and pauses on leave. Layout variants and text fields
-      // work the same as for images.
+      // work the same as for images. Holds for 15s so a bit more of the
+      // video is seen before advancing.
       {
-        src:      "media/sample-video.mp4",
+        src:           "media/sample-video.mp4",
+        autoAdvanceMs: 15000,
         title:    "Real-world install footage",
         subtitle: "Drop in any .mp4 / .webm / .ogg — it's auto-detected by extension",
         body:     "Videos play immediately when the slide becomes current and pause when it leaves, so nothing runs in the background. Use `loop: false` per slide to play once and stop on the last frame."
