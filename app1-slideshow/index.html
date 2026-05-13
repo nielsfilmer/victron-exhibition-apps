@@ -130,6 +130,11 @@
        The small-image variants override below to `contain` so source
        images are never cropped. */
     object-fit: cover;
+    /* `<video>` has a black UA-default background that shows through the
+       letterbox bars when the video's aspect doesn't match the frame.
+       Forcing transparent makes the bars consistent with `<img>` — the
+       sinus pattern behind the frame shows through. */
+    background: transparent;
     display: block;
     opacity: 0;
     transform: scale(1.02);
