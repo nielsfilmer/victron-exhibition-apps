@@ -3,6 +3,13 @@
 Persistent context for future Claude sessions on this repo. Read this first
 before making changes.
 
+> **Naming note.** The local working directory is `intersolar-tv-apps/` and
+> the LaunchAgent bundles are `com.intersolar.app{1,2}` for legacy reasons
+> (the repo was renamed to `victron-exhibition-apps` after the LaunchAgent
+> identifiers and folder name had been baked in). **Do not "fix" the
+> `com.intersolar.*` plist labels** — `kiosk/install.sh` looks them up by
+> that exact name and renaming would break the auto-boot.
+
 ---
 
 ## Workflow (mandatory)
@@ -14,12 +21,17 @@ Every task ends with a pull request. Do **not** push directly to `main`.
 2. **Commit and push the branch**, then open a PR against `main` via
    `gh pr create`. Title is concise; description summarises the change
    and lists anything the reviewer should pay extra attention to.
-3. **Spawn a senior-developer review agent.** Use the `Agent` tool with
-   subagent_type `general-purpose`, and frame it as a senior developer
-   doing code review on the PR. The agent **must** be given the project
-   goals (see below) so its review weighs them. Have it post review
-   comments to the PR itself with `gh pr review --comment` /
-   `gh pr review --request-changes` so the user sees the same record.
+3. **Spawn a senior-developer review agent.** Use the agent-spawn tool
+   exposed by your harness (`Agent` in the current Claude Code build,
+   sometimes `Task` in older builds) with `subagent_type: "general-purpose"`,
+   and frame it as a senior developer doing code review on the PR. The
+   agent **must** be given the project goals (see below) so its review
+   weighs them. Have it post review comments to the PR itself with
+   `gh pr review N --comment --body "..."` (or `--request-changes` for
+   blocking issues — but note GitHub blocks self-review if the agent's
+   gh token is the same account as the PR author, so it'll be forced to
+   `--comment`; flag any blocking items explicitly in the body in that
+   case). The user sees the review on the PR.
 4. **Address every amendment** the review agent raises before notifying
    the user. Push follow-up commits to the same PR branch; do not open
    a second PR for review fixes.
@@ -27,27 +39,26 @@ Every task ends with a pull request. Do **not** push directly to `main`.
    and merge. Do **not** merge the PR yourself — the user is the
    merge gate.
 
-A reasonable review prompt template:
+A reasonable review prompt template (refers to the canonical constraint
+list in this file rather than duplicating it, so the two never drift):
 
 ```
 You are a senior developer doing a code review on PR #N of
-nielsfilmer/victron-exhibition-apps. Read the diff via `gh pr diff N`,
-the full changed files for context, and CLAUDE.md (project goals).
+nielsfilmer/victron-exhibition-apps. Read the diff via `gh pr diff N
+-R nielsfilmer/victron-exhibition-apps`, the full changed files for
+context, and CLAUDE.md in this repo (sections "Hard project constraints"
+and "Common pitfalls").
 
-Critically evaluate the change against these project constraints:
-- The kiosk must run 100% offline from file:// — no network calls.
-- Both apps must work as standalone folders that can be copied onto
-  a Mac without a build step.
-- The design source of truth is the linked Figma; deviations need a
-  good reason.
-- Layout scales linearly from 1080p to 4K via vw-based sizing.
-- Slide text is never selectable / draggable / copyable.
-- Each app is configured by editing its `config.js` only.
+Critically evaluate the change against EVERY constraint and pitfall
+listed in those two sections. Treat them as load-bearing — even minor
+deviations are worth flagging.
 
-Output: PR review comments via `gh pr review` covering correctness,
-adherence to the constraints above, regressions, and any code-quality
-nits worth fixing now. Don't approve unless the change is genuinely
-clean — flag issues even if they're minor.
+Output: PR review comments via `gh pr review N
+-R nielsfilmer/victron-exhibition-apps --comment` (or
+`--request-changes` if your gh account is allowed to). Don't approve
+unless the change is genuinely clean. If GitHub blocks the
+request-changes review (self-review on your own PR), fall back to
+`--comment` and flag blocking issues explicitly in the body.
 ```
 
 ---
@@ -145,6 +156,15 @@ The Victron design system file (referenced earlier in the build) is
   circumference. JS const `RING_R` **must match** the `<circle r="…">`
   attribute in the markup or the dasharray won't fully cover the path
   and a partial arc is visible at fraction 0 (the "drift" bug).
+- **Pause behaviour** — `pauseMinutes: 5` keeps the slideshow paused
+  for 5 minutes then auto-resumes (countdown restarts from empty per
+  spec). `pauseMinutes: 0` is the special case "stay paused until the
+  user manually resumes" (the auto-resume `setTimeout` is skipped).
+- **Body-text font fallback** — `--font-body` declares `"Inter"` first
+  and silently falls back to the system stack on a fresh Mac (Inter
+  isn't a macOS system font and isn't bundled). Acceptable visually
+  for the body at kiosk viewing distance; if you need an exact match
+  to Figma, ship Inter alongside Museo Sans in `app1-slideshow/fonts/`.
 - **Swipe** is bound to the whole `#stage` element with pointerId
   tracking. Threshold: `max(60px, 4% of viewport width)`, max duration
   600 ms, requires `|dx| > 1.2 × |dy|`. Control buttons stop
@@ -160,7 +180,11 @@ The Victron design system file (referenced earlier in the build) is
   display resolution.
 - `debug: true` in `config.js` outlines the hotspots and shows a HUD
   with the current video time — used during setup to calibrate
-  coordinates against the real production video.
+  coordinates against the real production video. **The checked-in
+  `app2-chapters/config.js` currently has `debug: true`** because the
+  production video and final coordinates haven't been provided yet.
+  **Flip it to `false` before the show** or the kiosk will display
+  red calibration outlines over every hotspot.
 - No text, no font dependencies, no countdown — much simpler than App 1.
 
 ---
@@ -195,11 +219,23 @@ The Victron design system file (referenced earlier in the build) is
    of defence, but you also need `selectstart`, `dragstart`, and
    `contextmenu` listeners that `preventDefault()`, plus
    `draggable="false"` on `<img>` tags and `-webkit-touch-callout: none`.
+9. **`font-display: block` is intentional.** App 1's `@font-face` for
+   Museo Sans uses `font-display: block` and the boot path gates the
+   first slide reveal on `document.fonts.ready` (with a 1500 ms safety-
+   net `setTimeout`). The trade-off: if the TTF ever fails to load,
+   slide 1's words stay invisible until the safety net fires (≤1.5 s),
+   then they render in the Inter fallback. This is deliberate — `block`
+   avoids a flash of incorrect font (Inter → Museo Sans glyph re-flow),
+   and the gate ensures line-wrap measurements happen with the final
+   glyph widths so the per-line stagger lands on the right words.
 
 ## Useful commands
 
 ```bash
-# Find anything fetching from the network
+# Find anything fetching from the network at runtime. Scoped to the runtime
+# HTML/JS only on purpose — broadening to the whole repo would pick up
+# README links and the W3C SVG namespace identifier in `sinus-bg.svg`, which
+# are not actual fetches.
 grep -nE 'https?://' app1-slideshow/index.html app1-slideshow/config.js \
                       app2-chapters/index.html  app2-chapters/config.js
 
@@ -215,8 +251,11 @@ open -na "Google Chrome" --args \
 
 ## File map (quick orientation)
 
+Working-directory name is `intersolar-tv-apps/` (legacy — see naming
+note at the top); repo on GitHub is `nielsfilmer/victron-exhibition-apps`.
+
 ```
-intersolar-tv-apps/
+intersolar-tv-apps/             # local folder; repo is victron-exhibition-apps
 ├── README.md                  # user-facing setup docs
 ├── CLAUDE.md                  # this file — context for Claude
 ├── .gitignore                 # excludes .DS_Store, .claude/, *.zip, kiosk logs
