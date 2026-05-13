@@ -34,60 +34,69 @@
 //                              button is pressed; after this elapses the countdown
 //                              starts over from empty (default 5; set 0 to pause
 //                              indefinitely until manually resumed).
+//   controlsAlign            — "left" (default) or "right". Pins the controls
+//                              cluster (back / X-of-Y / next+ring / pause) to
+//                              the bottom-left or bottom-right of the screen.
+//                              Cluster order is preserved either way.
+//                              When set to "right", the `large-image` variant
+//                              auto-flips its image to the left edge so the
+//                              controls don't sit on top of it.
 window.APP_CONFIG = {
   slideshow: {
     images: [
       // Default — image right, text left
       {
-        src:      "media/slide-1.jpg",
-        title:    "Solar energy at scale",
+        src: "media/slide-1.jpg",
+        title: "Solar energy at scale",
         subtitle: "Victron MPPT controllers extract every available watt",
-        body:     "The intelligent maximum-power-point-tracking algorithm sweeps the array continuously, so partial shading and changing weather never cost you more than they have to."
+        body: "The intelligent maximum-power-point-tracking algorithm sweeps the array continuously, so partial shading and changing weather never cost you more than they have to.",
       },
       // Large image — image takes most of the screen with rounded corners
       {
-        src:      "media/slide-2.jpg",
-        variant:  "large-image",
-        title:    "Inverters built to last",
+        src: "media/slide-2.jpg",
+        variant: "large-image",
+        title: "Inverters built to last",
         subtitle: "Seamless switching between grid, generator and battery",
-        body:     "MultiPlus and Quattro inverter/chargers cut over silently in under 20 ms. Pure sine-wave output keeps sensitive electronics running clean."
+        body: "MultiPlus and Quattro inverter/chargers cut over silently in under 20 ms. Pure sine-wave output keeps sensitive electronics running clean.",
       },
       // Text right — mirror layout, image left, text right
       {
-        src:      "media/slide-3.jpg",
-        variant:  "text-right",
-        title:    "Storage that scales",
+        src: "media/slide-3.jpg",
+        variant: "text-right",
+        title: "Storage that scales",
         subtitle: "From a single Lithium Smart battery to a multi-MWh BESS",
-        body:     "The same Victron components scale up. Add capacity later without redesigning the system, and keep using the same configuration tools and dashboards."
+        body: "The same Victron components scale up. Add capacity later without redesigning the system, and keep using the same configuration tools and dashboards.",
       },
       // Fullscreen — image fills the entire screen, no text, no sinus background.
       // Lingers 12s on this slide instead of the global 8s (per-slide override).
       {
-        src:           "media/slide-4.jpg",
-        variant:       "fullscreen",
-        autoAdvanceMs: 12000
+        src: "media/slide-4.jpg",
+        variant: "fullscreen",
+        autoAdvanceMs: 12000,
       },
       // VIDEO slide — muted, looped, plays from frame 0 every time the slide
       // becomes current and pauses on leave. Layout variants and text fields
       // work the same as for images. Holds for 15s so a bit more of the
       // video is seen before advancing.
       {
-        src:           "media/sample-video.mp4",
+        src: "media/sample-video.mp4",
         autoAdvanceMs: 15000,
-        title:    "Real-world install footage",
-        subtitle: "Drop in any .mp4 / .webm / .ogg — it's auto-detected by extension",
-        body:     "Videos play immediately when the slide becomes current and pause when it leaves, so nothing runs in the background. Use `loop: false` per slide to play once and stop on the last frame."
+        title: "Real-world install footage",
+        subtitle:
+          "Drop in any .mp4 / .webm / .ogg — it's auto-detected by extension",
+        body: "Videos play immediately when the slide becomes current and pause when it leaves, so nothing runs in the background. Use `loop: false` per slide to play once and stop on the last frame.",
       },
       // Default again
       {
-        src:      "media/slide-5.jpg",
-        title:    "Designed for off-grid life",
+        src: "media/slide-5.jpg",
+        title: "Designed for off-grid life",
         subtitle: "Reliability when the grid is hundreds of kilometres away",
-        body:     "Victron's component-based approach means anything that fails can be swapped on-site — no proprietary modules, no waiting weeks for a return."
-      }
+        body: "Victron's component-based approach means anything that fails can be swapped on-site — no proprietary modules, no waiting weeks for a return.",
+      },
     ],
     autoAdvanceMs: 8000,
-    transitionMs:  700
+    transitionMs: 700,
   },
-  pauseMinutes: 5
+  pauseMinutes: 5,
+  controlsAlign: "right",
 };

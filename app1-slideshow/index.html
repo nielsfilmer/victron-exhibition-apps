@@ -162,13 +162,30 @@
 
   /* ----- Variant: large-image — image fills more of screen with sharp corners.
            Figma 6428:13078 specifies a 24px corner radius; the kiosk variant
-           drops it per stakeholder direction. ----- */
+           drops it per stakeholder direction. By default the image is flushed
+           to the right edge; when the controls cluster is on the right
+           (`controlsAlign: "right"` → `body.controls-right`) the image flips
+           to the left edge so the controls don't sit on top of it. ----- */
   .slide.variant-large-image .slide-img-frame {
     right: 2.344vw;                /* 45px @ 1920w */
+    left: auto;
     top: 50%;
     transform: translateY(-50%);
     width: 68.125vw;               /* 1308px @ 1920w */
     height: 49.74vw;               /* 955px @ 1920w */
+  }
+  body.controls-right .slide.variant-large-image .slide-img-frame {
+    right: auto;
+    left: 2.344vw;
+  }
+  /* When the image flips left, the text panel must flip right too — otherwise
+     it sits on top of the image (which spans ~2.3vw → 70.5vw at the design
+     width). Other variants don't need this: variant-default keeps image right
+     + text left even with controls-right; variant-text-right already anchors
+     text on the right; variant-fullscreen has no text. */
+  body.controls-right .slide.variant-large-image .slide-text {
+    left: auto;
+    right: var(--pad-edge);
   }
   .slide.variant-large-image .slide-text {
     position: absolute;
@@ -244,16 +261,23 @@
   }
 
   /* ===========================================================
-     Controls cluster (bottom-left): back, "X / Y", next+ring, pause
+     Controls cluster: back, "X / Y", next+ring, pause.
+     Defaults to bottom-left; flip with `controlsAlign: "right"` in config.
+     Cluster order (back → pagination → next → pause) is preserved either way.
      =========================================================== */
   #controls {
     position: absolute;
     left: var(--pad-edge);
+    right: auto;
     bottom: var(--pad-edge);
     display: flex;
     align-items: center;
     gap: var(--gap-controls);
     z-index: 3;
+  }
+  body.controls-right #controls {
+    left: auto;
+    right: var(--pad-edge);
   }
 
   .ctrl-btn {
@@ -414,6 +438,12 @@
   const autoAdvanceMs = (typeof ss.autoAdvanceMs === 'number') ? ss.autoAdvanceMs : 8000;
   const pauseMinutes  = cfg.pauseMinutes != null ? cfg.pauseMinutes : 5;
   const pauseMs       = Math.max(0, pauseMinutes) * 60 * 1000;
+
+  // Controls cluster alignment — "left" (default) or "right". Anything else
+  // falls back to "left". Applied once at boot via a body class; the
+  // back→pagination→next→pause order is preserved either way.
+  const controlsAlign = cfg.controlsAlign === 'right' ? 'right' : 'left';
+  if (controlsAlign === 'right') document.body.classList.add('controls-right');
 
   document.documentElement.style.setProperty('--transition-ms', transitionMs + 'ms');
 
