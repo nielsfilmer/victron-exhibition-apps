@@ -414,7 +414,7 @@
 
   // Build slides
   const slideContainers = [];
-  const imgEls  = [];   // each entry is either an <img> or a <video>
+  const mediaEls  = [];   // each entry is either an <img> or a <video>
   const textEls = [];
   const bodyEls = [];
   const VALID_VARIANTS = new Set(['default', 'large-image', 'text-right', 'fullscreen']);
@@ -482,7 +482,7 @@
     }
     imgFrame.appendChild(mediaEl);
     slideEl.appendChild(imgFrame);
-    imgEls.push(mediaEl);
+    mediaEls.push(mediaEl);
 
     // Text — skipped entirely for the fullscreen variant
     let bodyEl = null;
@@ -597,7 +597,7 @@
     slideContainers.forEach((el, i) => {
       const isNew = (i === next);
       el.classList.toggle('is-current', isNew);
-      const v = imgEls[i];
+      const v = mediaEls[i];
       if (v && v.tagName === 'VIDEO') {
         if (isNew) {
           try { v.currentTime = 0; } catch (_) {}
