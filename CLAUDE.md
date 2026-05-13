@@ -179,6 +179,14 @@ The Victron design system file (referenced earlier in the build) is
   isn't a macOS system font and isn't bundled). Acceptable visually
   for the body at kiosk viewing distance; if you need an exact match
   to Figma, ship Inter alongside Museo Sans in `app1-slideshow/fonts/`.
+- **Image vs video media** — slides accept either; the renderer
+  auto-detects by `src` file extension (`VIDEO_EXT` regex in the JS).
+  Videos are rendered as `<video muted playsinline loop preload="metadata">`
+  so they're cheap to ship many of (only metadata is held per video,
+  full data streams from disk on play). On slide-enter the video is
+  reset to `currentTime = 0` and `play()` is called; on slide-leave
+  `pause()` is called — videos never run in the background. The
+  `.slide-img` CSS class is shared by both element types.
 - **Swipe** is bound to the whole `#stage` element with pointerId
   tracking. Threshold: `max(60px, 4% of viewport width)`, max duration
   600 ms, requires `|dx| > 1.2 × |dy|`. Control buttons stop
@@ -233,7 +241,13 @@ The Victron design system file (referenced earlier in the build) is
    of defence, but you also need `selectstart`, `dragstart`, and
    `contextmenu` listeners that `preventDefault()`, plus
    `draggable="false"` on `<img>` tags and `-webkit-touch-callout: none`.
-9. **`font-display: block` is intentional.** App 1's `@font-face` for
+9. **Video autoplay needs `muted` AND `playsinline`.** Chrome blocks
+   autoplay of any video with sound or without `playsinline` unless
+   the user has interacted with the page. The kiosk launcher passes
+   `--autoplay-policy=no-user-gesture-required` as a belt-and-braces
+   fallback. If you ever add a per-video `muted: false` config option,
+   videos will silently fail to autoplay outside the kiosk launcher.
+10. **`font-display: block` is intentional.** App 1's `@font-face` for
    Museo Sans uses `font-display: block` and the boot path gates the
    first slide reveal on `document.fonts.ready` (with a 1500 ms safety-
    net `setTimeout`). The trade-off: if the TTF ever fails to load,
