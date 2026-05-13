@@ -124,7 +124,10 @@
   }
   .slide-img {
     width: 100%; height: 100%;
-    object-fit: cover;
+    /* `contain` (not `cover`) — fills the available space along the axis
+       that fits, leaves whitespace on the other axis. The image is never
+       cropped; aspect ratio is preserved. */
+    object-fit: contain;
     display: block;
     opacity: 0;
     transform: scale(1.02);
@@ -143,14 +146,15 @@
   }
 
   /* ----- Variant: default — image right, text left.
-           Horizontal position mirrors the text-right variant for visual balance.
-           Vertical position is centered in the SPACE ABOVE the controls cluster
-           so the image always clears the controls regardless of viewport height. ----- */
+           Image-frame uses the Figma 6437:465 margins, mirrored to the right
+           edge: 47px from the right, 71px from top, 1204×815 box. The image
+           inside uses `object-fit: contain` so it fills width OR height
+           (whichever fits its aspect) without being cropped. ----- */
   .slide.variant-default .slide-img-frame {
     right: 2.448vw;                /* 47px @ 1920w (mirror of text-right) */
-    top:   calc((100vh - var(--controls-zone) - var(--img-h)) / 2);
-    width:  var(--img-w);
-    height: var(--img-h);
+    top:   3.698vw;                /* 71px @ 1920w (Figma 6437:465) */
+    width:  var(--img-w);          /* 1204px @ 1920w */
+    height: var(--img-h);          /* 815px @ 1920w */
   }
   .slide.variant-default .slide-text {
     position: absolute;
@@ -195,14 +199,13 @@
     z-index: 2;
   }
 
-  /* ----- Variant: text-right — image left, text right (Figma 6437:465).
-           Same vertical rule as `default` so the image position is identical
-           (mirrored horizontally) on both small-image variants. ----- */
+  /* ----- Variant: text-right — image left, text right (Figma 6437:465 exact).
+           Same image-frame box as `default`, just anchored to the left edge. ----- */
   .slide.variant-text-right .slide-img-frame {
-    left: 2.448vw;                 /* 47px @ 1920w (mirror of default) */
-    top:  calc((100vh - var(--controls-zone) - var(--img-h)) / 2);
-    width:  var(--img-w);
-    height: var(--img-h);
+    left: 2.448vw;                 /* 47px @ 1920w (Figma 6437:465) */
+    top:  3.698vw;                 /* 71px @ 1920w (Figma 6437:465) */
+    width:  var(--img-w);          /* 1204px @ 1920w */
+    height: var(--img-h);          /* 815px @ 1920w */
   }
   .slide.variant-text-right .slide-text {
     position: absolute;

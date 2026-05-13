@@ -150,14 +150,19 @@ The Victron design system file (referenced earlier in the build) is
   `fullscreen` variant fades out the sinus via
   `body.fullscreen-current #sinus-bg { opacity: 0 }`.
 - **Image position for small variants** (`default` and `text-right`)
-  is centered in the *space above the controls cluster* — not the full
-  viewport. The calc is
-  `top: calc((100vh - var(--controls-zone) - var(--img-h)) / 2)` where
-  `--controls-zone = pad-edge + btn-size = 7.5vw`. This guarantees the
-  image bottom clears the controls top at any viewport height.
-  Using a literal Figma top (e.g. `3.698vw`) instead of the calc breaks
-  at viewport heights below the design height — the image then sits
-  behind the controls.
+  uses the Figma 6437:465 margins — 47 px from the appropriate
+  horizontal edge, 71 px from top, 1204×815 box (`right/left: 2.448vw;
+  top: 3.698vw; width: var(--img-w); height: var(--img-h)`). The two
+  variants are horizontally mirrored copies of the same rule. At the
+  16:9 production targets (1920×1080 and 3840×2160) the image bottom
+  lands ~50 px above the controls top. At non-16:9 dev viewports
+  (e.g. very short screens) this can overlap controls — accepted
+  trade-off; the kiosk targets are 16:9.
+- **`.slide-img` uses `object-fit: contain`**, not `cover`. The image
+  fills the image-frame box along the axis that fits its aspect and
+  leaves whitespace on the other axis. Source images are not cropped.
+  Don't switch back to `cover` without an explicit ask — the
+  whitespace is intentional.
 - **Title is split into per-word `<span class="word">` spans** during
   build. After `document.fonts.ready` resolves, words are grouped into
   lines by their `getBoundingClientRect().top` and each word gets a
