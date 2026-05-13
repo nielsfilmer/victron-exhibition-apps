@@ -2,12 +2,20 @@
 // Loaded by index.html via a <script> tag so it works over file:// (no server needed).
 //
 // Per slide:
-//   src       — path to the image
+//   src       — path to the media. Auto-detected by extension:
+//                 .jpg/.png/.svg/etc → rendered as <img>
+//                 .mp4/.webm/.ogg/.m4v/.mov → rendered as muted <video>
+//               Videos play automatically when the slide becomes current
+//               (from frame 0) and pause when the slide leaves — so they
+//               never run in the background. Many videos can be configured
+//               (preload="metadata" keeps the per-video memory cost low).
+//   loop      — videos only. `false` plays once and stops on the last
+//                frame; default is `true` (loop until slide changes).
 //   variant   — layout variant. One of:
-//                 "default"      → image right (~63% wide), text top-left, sinus bg
-//                 "large-image"  → image fills right with rounded corners, text top-left, sinus bg
-//                 "text-right"   → image left, text top-right, sinus bg
-//                 "fullscreen"   → image fills entire screen, no text, no sinus bg
+//                 "default"      → media right (~63% wide), text top-left, sinus bg
+//                 "large-image"  → media fills right with rounded corners, text top-left, sinus bg
+//                 "text-right"   → media left, text top-right, sinus bg
+//                 "fullscreen"   → media fills entire screen, no text, no sinus bg
 //               omit `variant` for "default".
 //   title     — leading bold portion of the headline (rendered 100% white)
 //   subtitle  — continuation rendered inline at 80% white
@@ -51,6 +59,15 @@ window.APP_CONFIG = {
       {
         src:      "media/slide-4.jpg",
         variant:  "fullscreen"
+      },
+      // VIDEO slide — muted, looped, plays from frame 0 every time the slide
+      // becomes current and pauses on leave. Layout variants and text fields
+      // work the same as for images.
+      {
+        src:      "media/sample-video.mp4",
+        title:    "Real-world install footage",
+        subtitle: "Drop in any .mp4 / .webm / .ogg — it's auto-detected by extension",
+        body:     "Videos play immediately when the slide becomes current and pause when it leaves, so nothing runs in the background. Use `loop: false` per slide to play once and stop on the last frame."
       },
       // Default again
       {

@@ -73,7 +73,7 @@
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
   }
-  img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
+  img, video { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
 
   #stage {
     position: fixed; inset: 0;
@@ -414,10 +414,11 @@
 
   // Build slides
   const slideContainers = [];
-  const imgEls  = [];
+  const mediaEls  = [];   // each entry is either an <img> or a <video>
   const textEls = [];
   const bodyEls = [];
   const VALID_VARIANTS = new Set(['default', 'large-image', 'text-right', 'fullscreen']);
+  const VIDEO_EXT      = /\.(mp4|webm|ogg|m4v|mov)(\?.*)?$/i;
 
   // Build title as flat list of word spans (alternating .lead / .rest classes)
   // so we can stagger them line-by-line later.
@@ -450,19 +451,38 @@
     slideEl.className = 'slide variant-' + variant;
     slideEl.dataset.variant = variant;
 
-    // Image
+    // Media (image OR video) — file extension on `src` decides which.
+    // Videos play on slide-enter and pause on slide-leave (see renderSlide).
     const imgFrame = document.createElement('div');
     imgFrame.className = 'slide-img-frame';
-    const img = document.createElement('img');
-    img.className = 'slide-img';
-    img.src = s.src;
-    img.alt = s.title || ('Slide ' + (i + 1));
-    img.draggable = false;
-    img.loading = i === 0 ? 'eager' : 'lazy';
-    img.decoding = 'async';
-    imgFrame.appendChild(img);
+    const isVideo = VIDEO_EXT.test(s.src);
+    let mediaEl;
+    if (isVideo) {
+      mediaEl = document.createElement('video');
+      mediaEl.className = 'slide-img';        // shares all the .slide-img CSS (object-fit, opacity, scale entry)
+      mediaEl.src = s.src;
+      mediaEl.muted = true;                   // required for autoplay; kiosk runs silent anyway
+      mediaEl.playsInline = true;
+      mediaEl.loop = s.loop !== false;        // loop by default; pass `loop: false` per slide to disable
+      // `metadata` keeps memory footprint low when many videos are configured —
+      // only metadata is loaded ahead of time, full data streams when play() is called.
+      mediaEl.preload = 'metadata';
+      mediaEl.draggable = false;
+      mediaEl.setAttribute('aria-label', s.title || ('Slide ' + (i + 1)));
+      mediaEl.addEventListener('error',
+        () => console.warn('[slideshow] video failed to load:', s.src));
+    } else {
+      mediaEl = document.createElement('img');
+      mediaEl.className = 'slide-img';
+      mediaEl.src = s.src;
+      mediaEl.alt = s.title || ('Slide ' + (i + 1));
+      mediaEl.draggable = false;
+      mediaEl.loading = i === 0 ? 'eager' : 'lazy';
+      mediaEl.decoding = 'async';
+    }
+    imgFrame.appendChild(mediaEl);
     slideEl.appendChild(imgFrame);
-    imgEls.push(img);
+    mediaEls.push(mediaEl);
 
     // Text — skipped entirely for the fullscreen variant
     let bodyEl = null;
@@ -568,10 +588,26 @@
   };
 
   // Slide rendering — toggle `.is-current` on the slide container, which
-  // cascades to inner image + text via the variant CSS rules.
+  // cascades to inner image + text via the variant CSS rules. Also pauses
+  // any video on the leaving slide and restarts the video on the entering
+  // slide from frame 0 (so videos "play immediately" on enter and don't
+  // continue running in the background).
   let current = 0;
   const renderSlide = (next) => {
-    slideContainers.forEach((el, i) => el.classList.toggle('is-current', i === next));
+    slideContainers.forEach((el, i) => {
+      const isNew = (i === next);
+      el.classList.toggle('is-current', isNew);
+      const v = mediaEls[i];
+      if (v && v.tagName === 'VIDEO') {
+        if (isNew) {
+          try { v.currentTime = 0; } catch (_) {}
+          const p = v.play();
+          if (p && p.catch) p.catch(() => {});  // muted + playsinline → autoplay should work
+        } else {
+          try { v.pause(); } catch (_) {}
+        }
+      }
+    });
     pageCur.textContent = String(next + 1);
     // Hide the sinus background while a fullscreen-variant slide is current
     document.body.classList.toggle('fullscreen-current',

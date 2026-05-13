@@ -38,9 +38,9 @@ Each app folder is self-contained: drop the folder anywhere on the kiosk Mac
 and open `index.html` in Chrome — no build step, no server.
 
 > **Note:** `app1-slideshow/media/slide-*.jpg` are placeholder photos from
-> picsum.photos (random landscape photography); `app2-chapters/media/main.mp4`
-> is the Sintel trailer (Blender Foundation, CC). Swap them for production
-> assets before the show.
+> picsum.photos (random landscape photography); `app1-slideshow/media/sample-video.mp4`
+> and `app2-chapters/media/main.mp4` are both the Sintel trailer (Blender
+> Foundation, CC). Swap them for production assets before the show.
 
 ---
 
@@ -51,7 +51,7 @@ Implements the UX from
 
 **Layout** — each slide carries a `variant` that positions the image and text:
 
-| `variant` | Image | Text | Sinus bg | Figma |
+| `variant` | Media (image or video) | Text | Sinus bg | Figma |
 |---|---|---|---|---|
 | `default` (omitted) | Right (~63% wide, centered) | Top-left (443 px) | Yes | [6428:12910](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-12910) |
 | `large-image` | Right, larger (68% wide, 24 px rounded corners) | Top-left | Yes | [6428:13078](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-13078) |
@@ -100,7 +100,7 @@ window.APP_CONFIG = {
 
 | Field | Meaning |
 |---|---|
-| `slideshow.images[]` | Any number of `{src, variant?, title?, subtitle?, body?}` objects. `src` is the image. `variant` selects one of the four layouts above (defaults to `default`). `title` is the leading bold portion of the headline (100% white); `subtitle` is rendered inline at 80% white as a continuation. `body` is the paragraph below. All text fields are ignored on the `fullscreen` variant. |
+| `slideshow.images[]` | Any number of `{src, variant?, loop?, title?, subtitle?, body?}` objects. `src` can be either an **image** (`.jpg`/`.png`/`.svg`/etc.) or a **video** (`.mp4`/`.webm`/`.ogg`/`.m4v`/`.mov`) — the renderer auto-detects by file extension. Videos are muted, play from frame 0 the moment the slide becomes current, and pause as soon as it leaves (so nothing plays in the background). `loop` (videos only, default `true`) — set `false` to play once and stop on the last frame. `variant` selects one of the four layouts above (defaults to `default`). `title` is the leading bold portion of the headline (100% white); `subtitle` is rendered inline at 80% white as a continuation. `body` is the paragraph below. All text fields are ignored on the `fullscreen` variant. |
 | `slideshow.autoAdvanceMs` | Duration of the countdown ring; how long until the slide auto-advances (default `8000`). |
 | `slideshow.transitionMs` | Crossfade duration between slides (default `700`). |
 | `pauseMinutes` | Minutes to keep the slideshow paused after the pause button is pressed (default `5`). After this elapses the countdown starts over from empty. Set to `0` to keep paused indefinitely until manually resumed. |
