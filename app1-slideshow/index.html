@@ -178,6 +178,15 @@
     right: auto;
     left: 2.344vw;
   }
+  /* When the image flips left, the text panel must flip right too — otherwise
+     it sits on top of the image (which spans ~2.3vw → 70.5vw at the design
+     width). Other variants don't need this: variant-default keeps image right
+     + text left even with controls-right; variant-text-right already anchors
+     text on the right; variant-fullscreen has no text. */
+  body.controls-right .slide.variant-large-image .slide-text {
+    left: auto;
+    right: var(--pad-edge);
+  }
   .slide.variant-large-image .slide-text {
     position: absolute;
     left: var(--pad-edge);
