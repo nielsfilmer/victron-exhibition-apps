@@ -333,12 +333,13 @@
     flex-shrink: 0;
   }
   /* Countdown ring sits ENTIRELY inside the button, with its outer edge flush
-     against the button's outer edge. The SVG matches the button's box; the
-     stroke fits inside that box (no overflow needed). */
+     against the button's outer edge. The SVG box is extended by 1px on every
+     side via `inset: -1px` so it covers the button's 1px border (otherwise
+     `position: absolute; inset: 0` would anchor to the padding edge — the
+     inside of the border — leaving a 1px blue rim outside the white stroke). */
   #countdown-ring {
     position: absolute;
-    inset: 0;
-    width: 100%; height: 100%;
+    inset: -1px;                   /* covers the 1px button border */
     pointer-events: none;
     transform: rotate(-90deg);
   }
