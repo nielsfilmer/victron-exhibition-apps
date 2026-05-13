@@ -150,14 +150,22 @@ The Victron design system file (referenced earlier in the build) is
   `fullscreen` variant fades out the sinus via
   `body.fullscreen-current #sinus-bg { opacity: 0 }`.
 - **Image position for small variants** (`default` and `text-right`)
-  is centered in the *space above the controls cluster* — not the full
-  viewport. The calc is
-  `top: calc((100vh - var(--controls-zone) - var(--img-h)) / 2)` where
-  `--controls-zone = pad-edge + btn-size = 7.5vw`. This guarantees the
-  image bottom clears the controls top at any viewport height.
-  Using a literal Figma top (e.g. `3.698vw`) instead of the calc breaks
-  at viewport heights below the design height — the image then sits
-  behind the controls.
+  uses the Figma 6437:465 box size (1204×815 → `var(--img-w)`/
+  `var(--img-h)`) at 47 px from the appropriate horizontal edge.
+  The vertical position is centred in the space above the controls
+  cluster:
+  `top: calc((100vh - var(--controls-zone) - var(--img-h)) / 2)`
+  where `--controls-zone = pad-edge + btn-size = 7.5vw`. So the
+  gap above the image equals the gap between image and controls
+  top — regardless of viewport height. `large-image` and
+  `fullscreen` are unaffected; their positioning is independent.
+- **`object-fit` is per-variant.** Default rule on `.slide-img` is
+  `cover`, which `large-image` and `fullscreen` use (they're sized
+  to dominate the layout, cropping is acceptable). The two
+  small-image variants override to `contain` so source images are
+  letterboxed, not cropped — the sinus pattern shows through where
+  the image doesn't fill the frame. Don't widen the override to all
+  variants without an explicit ask.
 - **Title is split into per-word `<span class="word">` spans** during
   build. After `document.fonts.ready` resolves, words are grouped into
   lines by their `getBoundingClientRect().top` and each word gets a
@@ -243,9 +251,15 @@ The Victron design system file (referenced earlier in the build) is
    paths; hand-copying frequently drops paths. Load the file via
    `<img src="media/sinus-bg.svg">` so the on-disk asset stays the
    single source of truth.
-5. **Don't use a fixed-pixel `top` on small-image variants.** It only
-   works at exactly 1080 viewport height. Use the
-   centered-above-controls calc (see above).
+5. **Small-image variants centre vertically above the controls** —
+   see the architecture section above. The frame uses the Figma
+   6437:465 box size (1204×815), but the vertical position is
+   `calc((100vh - var(--controls-zone) - var(--img-h)) / 2)` rather
+   than Figma's literal `top: 71px`. This was tried both ways during
+   the build: Figma-exact only works at 1920×1080; the calc keeps the
+   image clear of the controls and symmetrically padded at any
+   viewport height. **Don't replace the calc with a fixed `top`**
+   without an explicit ask.
 6. **Use `vw` for vertical dimensions too**, not `vh`. The design is
    16:9 and the production targets are all 16:9; using `vw` everywhere
    keeps proportions locked to the 1920×1080 design pixel values.
