@@ -1,0 +1,26 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code session state
+.claude/
+
+# Build / packaging artifacts
+*.zip
+
+# Kiosk LaunchAgent log files (generated at runtime, not source)
+kiosk/*.out.log
+kiosk/*.err.log
+
+# Chrome kiosk profile directories (created at runtime in $HOME)
+.kiosk-app1-profile/
+.kiosk-app2-profile/

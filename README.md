@@ -1,0 +1,217 @@
+# Intersolar TV Apps
+
+Two standalone HTML kiosk apps for touchscreen TVs at the Intersolar exhibition,
+plus scripts to boot a Mac into either app in Chrome kiosk mode.
+
+```
+intersolar-tv-apps/
+├── app1-slideshow/      # Slideshow with countdown + pause (Victron-styled)
+│   ├── index.html
+│   ├── config.js
+│   ├── fonts/           # museosans-700.ttf (self-hosted, no network calls)
+│   └── media/           # sinus-bg.svg + slide-1..5.jpg (4K placeholders)
+├── app2-chapters/       # Fullscreen video with invisible hotspot buttons
+│   ├── index.html
+│   ├── config.js
+│   └── media/           # main.mp4 (placeholder)
+└── kiosk/
+    ├── launch-app1.sh
+    ├── launch-app2.sh
+    ├── com.intersolar.app1.plist
+    ├── com.intersolar.app2.plist
+    └── install.sh
+```
+
+Each app folder is self-contained: drop the folder anywhere on the kiosk Mac
+and open `index.html` in Chrome — no build step, no server.
+
+> **Note:** `app1-slideshow/media/slide-*.jpg` are placeholder photos from
+> picsum.photos (random landscape photography); `app2-chapters/media/main.mp4`
+> is the Sintel trailer (Blender Foundation, CC). Swap them for production
+> assets before the show.
+
+---
+
+## App 1 — Slideshow with Countdown + Pause
+
+Implements the UX from
+[Figma 6428-12557](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-12557).
+
+**Layout** — each slide carries a `variant` that positions the image and text:
+
+| `variant` | Image | Text | Sinus bg | Figma |
+|---|---|---|---|---|
+| `default` (omitted) | Right (~63% wide, centered) | Top-left (443 px) | Yes | [6428:12910](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-12910) |
+| `large-image` | Right, larger (68% wide, 24 px rounded corners) | Top-left | Yes | [6428:13078](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-13078) |
+| `text-right` | Left (mirror of default) | Top-right (left=1368 px) | Yes | [6437:465](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6437-465) |
+| `fullscreen` | Fills the whole screen | none | **No** (hidden via opacity transition) | — |
+
+All four variants share the controls cluster (back / `current/total` / next +
+countdown ring / pause) in the bottom-left.
+
+**Controls cluster** (bottom of the text panel, left → right):
+- **Back** circle button — previous slide (wraps from slide 1 to last).
+- **Pagination text** — `current / total` (e.g. `3 / 5`).
+- **Next** circle button with a **countdown ring** drawn around it. The ring
+  fills from empty → full over `autoAdvanceMs`; when it completes the slide
+  auto-advances. Manual back/next resets the ring to empty and starts again.
+- **Pause** button — toggles auto-advance. While paused the ring freezes at
+  its current position. After `pauseMinutes` the app auto-resumes and the
+  countdown starts over from empty. Tap pause again to resume early.
+
+All slide text is non-selectable (CSS `user-select: none` plus
+`selectstart`/`dragstart` blocking) so kiosk users can't accidentally
+highlight or copy anything.
+
+**`config.js`** (loaded by `index.html` via a `<script>` tag — works over plain `file://`, no server needed)
+```js
+window.APP_CONFIG = {
+  slideshow: {
+    images: [
+      {
+        src:   "media/slide-1.jpg",
+        title: "Solar energy at scale",
+        body:  "Victron MPPT charge controllers extract every available watt..."
+      },
+      {
+        src:   "media/slide-2.jpg",
+        title: "Inverters built to last",
+        body:  "MultiPlus and Quattro inverter/chargers seamlessly switch..."
+      }
+    ],
+    autoAdvanceMs: 8000,
+    transitionMs:  700
+  },
+  pauseMinutes: 5
+};
+```
+
+| Field | Meaning |
+|---|---|
+| `slideshow.images[]` | Any number of `{src, variant?, title?, subtitle?, body?}` objects. `src` is the image. `variant` selects one of the four layouts above (defaults to `default`). `title` is the leading bold portion of the headline (100% white); `subtitle` is rendered inline at 80% white as a continuation. `body` is the paragraph below. All text fields are ignored on the `fullscreen` variant. |
+| `slideshow.autoAdvanceMs` | Duration of the countdown ring; how long until the slide auto-advances (default `8000`). |
+| `slideshow.transitionMs` | Crossfade duration between slides (default `700`). |
+| `pauseMinutes` | Minutes to keep the slideshow paused after the pause button is pressed (default `5`). After this elapses the countdown starts over from empty. Set to `0` to keep paused indefinitely until manually resumed. |
+
+---
+
+## App 2 — Chapter Hotspots over Fullscreen Video
+
+**Behaviour**
+- Single fullscreen video (`object-fit: cover`).
+- N invisible buttons overlaid in the top-left corner. Each jumps the video to
+  a `timestamp` (in seconds) when tapped.
+- Designed against a reference resolution (`designWidth`/`designHeight`) and
+  positioned in `%` of viewport — works on any TV size, the buttons stay
+  locked to their visual targets in the video.
+
+**Calibrating the hotspots**
+
+Set `debug: true` in `config.js`. The hotspots become red dashed
+rectangles with their label and target timestamp, and a HUD in the bottom-left
+shows the live video time, design size and viewport size. Once you have the
+right coordinates, set `debug: false`.
+
+**`config.js`** (loaded by `index.html` via a `<script>` tag — works over plain `file://`, no server needed)
+```js
+window.APP_CONFIG = {
+  video: "media/main.mp4",
+  loop: true,
+  muted: true,
+  designWidth: 3840,
+  designHeight: 2160,
+  debug: false,
+  buttons: [
+    { x: 80, y: 80,  width: 480, height: 220, timestamp: 0,  label: "Chapter 1" },
+    { x: 80, y: 340, width: 480, height: 220, timestamp: 12, label: "Chapter 2" }
+  ]
+};
+```
+
+| Field | Meaning |
+|---|---|
+| `designWidth` / `designHeight` | Reference resolution the `x/y/width/height` are expressed in (default 4K — works on 1080p too via `%` scaling). |
+| `debug` | Show hotspot outlines + a HUD with live video time. |
+| `buttons[]` | Any number of hotspots. `x/y/width/height` in pixels at the design resolution. `timestamp` in seconds. `label` is optional, used for `aria-label` and the debug overlay. |
+
+---
+
+## Local development
+
+Just open the HTML in Chrome with a `file://` URL — both apps are pure
+HTML/CSS/JS with no build step. To rebuild the slide content or swap the
+video, drop new files in `media/` and update `config.js`.
+
+If Chrome blocks autoplay during testing, click the page once (the kiosk
+launcher script passes `--autoplay-policy=no-user-gesture-required` so this
+isn't an issue in production).
+
+---
+
+## Mac kiosk setup (macOS Sequoia / 15)
+
+The kiosk Mac should be a dedicated machine — these steps assume nothing else
+is running on it.
+
+### 1. Prerequisites
+
+- macOS Sequoia (15.x), latest update.
+- Google Chrome installed at `/Applications/Google Chrome.app`.
+- The project folder copied somewhere on disk (e.g. `~/intersolar-tv-apps`).
+- **Fonts** — App 1's slide titles use **Museo Sans 700**, self-hosted from
+  `app1-slideshow/fonts/museosans-700.ttf` via an `@font-face` rule. **No
+  network calls.** Body text falls back to the system sans-serif stack
+  (San Francisco on macOS) if Inter isn't installed locally — visually close
+  enough to the Figma reference for kiosk distance viewing.
+
+### 2. Auto-login
+
+`System Settings → Users & Groups → Automatically log in as → <kiosk user>`.
+You'll need to disable FileVault for auto-login to work.
+
+### 3. Disable sleep, screensaver, notifications
+
+```bash
+# Display + system sleep off (caffeinate inside the launcher also covers this).
+sudo pmset -a displaysleep 0 sleep 0 disksleep 0
+
+# Hide the Dock and menu bar autohide is handled by Chrome --kiosk.
+# Notifications: System Settings → Notifications → turn on Do Not Disturb 24/7.
+```
+
+### 4. Install the LaunchAgent
+
+```bash
+cd /path/to/intersolar-tv-apps
+./kiosk/install.sh app1     # OR: ./kiosk/install.sh app2
+```
+
+This templates the absolute project path into the plist, copies it to
+`~/Library/LaunchAgents/`, and loads it. The agent will run on every login
+(`RunAtLoad`) and restart the kiosk if Chrome quits unexpectedly
+(`KeepAlive.SuccessfulExit = false`).
+
+Logs land in `kiosk/app1.out.log` / `app1.err.log` (or `app2.*`).
+
+### 5. Verify
+
+Reboot the Mac. After auto-login, Chrome should come up fullscreen running
+the app. To exit kiosk mode for maintenance:
+
+- `Cmd+Option+Esc` → force-quit Google Chrome, **or**
+- `launchctl unload ~/Library/LaunchAgents/com.intersolar.app1.plist`
+
+To uninstall the auto-launch entirely:
+
+```bash
+./kiosk/install.sh uninstall app1
+```
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Black screen, no Chrome | Check `kiosk/app1.err.log`. Most likely the project moved and the plist still points to the old path — re-run `./kiosk/install.sh app1`. |
+| Chrome shows "Restore pages?" | Profile got marked crashed. The launcher script auto-strips this on next start; if it persists, delete `~/.kiosk-app1-profile`. |
+| Video doesn't autoplay | The launcher passes `--autoplay-policy=no-user-gesture-required`; if you opened the file manually in regular Chrome, autoplay may be blocked. |
+| Hotspots in App 2 look misaligned | Set `"debug": true` and recalibrate `x/y/width/height` against the visible buttons in the video. |
