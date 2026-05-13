@@ -573,14 +573,26 @@
     if (countdownRAF) { cancelAnimationFrame(countdownRAF); countdownRAF = null; }
   };
 
+  // Per-slide auto-advance — each slide may set its own `autoAdvanceMs` to
+  // override the global default. Non-numeric values fall back to the global.
+  // 0 (or negative) means "stay on this slide indefinitely until the user
+  // navigates manually", matching the global semantics.
+  const effectiveAutoAdvanceMs = (i) => {
+    const s = slides[i];
+    return (s && typeof s.autoAdvanceMs === 'number') ? s.autoAdvanceMs : autoAdvanceMs;
+  };
+
+  let currentMs = 0;               // duration of the in-flight countdown; set at startCountdown()
+
   const startCountdown = () => {
     stopCountdown();
-    if (autoAdvanceMs <= 0 || isPaused) return;
+    currentMs = effectiveAutoAdvanceMs(current);
+    if (currentMs <= 0 || isPaused) return;
     countdownStart = performance.now();
     setRingProgress(0);
     const tick = (now) => {
       const elapsed = now - countdownStart;
-      const f = elapsed / autoAdvanceMs;
+      const f = elapsed / currentMs;
       setRingProgress(f);
       if (f < 1) {
         countdownRAF = requestAnimationFrame(tick);
