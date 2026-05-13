@@ -405,8 +405,13 @@
   const slides        = (cfg.slideshow && cfg.slideshow.images) || [];
   if (!slides.length) return showError('config.js: slideshow.images is empty');
 
-  const transitionMs  = (cfg.slideshow && cfg.slideshow.transitionMs) || 700;
-  const autoAdvanceMs = (cfg.slideshow && cfg.slideshow.autoAdvanceMs) || 8000;
+  // Use `typeof === 'number'` (not `||`) so an explicit 0 is honoured:
+  //   autoAdvanceMs: 0 → countdown disabled (`if (autoAdvanceMs <= 0)` later),
+  //                      i.e. slides stay until manual navigation.
+  // The `||`-based fallback would coerce 0 → 8000 and silently break that.
+  const ss = cfg.slideshow || {};
+  const transitionMs  = (typeof ss.transitionMs  === 'number') ? ss.transitionMs  : 700;
+  const autoAdvanceMs = (typeof ss.autoAdvanceMs === 'number') ? ss.autoAdvanceMs : 8000;
   const pauseMinutes  = cfg.pauseMinutes != null ? cfg.pauseMinutes : 5;
   const pauseMs       = Math.max(0, pauseMinutes) * 60 * 1000;
 
