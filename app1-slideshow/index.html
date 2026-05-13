@@ -577,7 +577,7 @@
     return (s && typeof s.autoAdvanceMs === 'number') ? s.autoAdvanceMs : autoAdvanceMs;
   };
 
-  let currentMs = autoAdvanceMs;   // duration in use by the in-flight countdown
+  let currentMs = 0;               // duration of the in-flight countdown; set at startCountdown()
 
   const startCountdown = () => {
     stopCountdown();
