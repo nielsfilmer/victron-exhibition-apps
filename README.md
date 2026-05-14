@@ -31,8 +31,16 @@ intersolar-tv-apps/
     ├── launch-app2.sh
     ├── com.intersolar.app1.plist
     ├── com.intersolar.app2.plist
-    └── install.sh
+    ├── install.sh
+    └── INSTALL.md          # full kiosk-Mac + touchscreen setup + show-floor ops
 ```
+
+> **Setting up a fresh kiosk Mac, configuring the touchscreen TV, or
+> handing the install to a non-developer Victron staffer?** Use
+> [`kiosk/INSTALL.md`](./kiosk/INSTALL.md) — that's the operational
+> manual (hardware checklist, iiWare TV settings, daily start/stop
+> procedure, troubleshooting). This `README.md` covers the **app
+> internals** (config schema, slide variants, animation timings).
 
 Each app folder is self-contained: drop the folder anywhere on the kiosk Mac
 and open `index.html` in Chrome — no build step, no server.
