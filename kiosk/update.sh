@@ -74,17 +74,24 @@ yellow "→ New commits in this update:"
 git log --oneline "$OLD_SHA..$NEW_SHA"
 echo
 
-# 6. Reload any loaded kiosk LaunchAgents so the running kiosk picks
+# 6. Restart any loaded kiosk LaunchAgents so the running kiosk picks
 # up the new files. install.sh already used absolute paths via the
 # templated plist, so no re-template is needed unless the project
 # folder moved (which this script can't help with anyway).
+#
+# Use `launchctl kickstart -k` — it explicitly KILLs the running
+# process before restarting. The older unload + load sequence doesn't
+# reliably kill the existing Chrome instance (Chrome doesn't always
+# react to SIGTERM in --kiosk mode), so the user ends up still
+# looking at the pre-update version even though the files on disk
+# changed. kickstart -k is bullet-proof.
 RELOADED=0
+UID_NUM="$(id -u)"
 for label in com.intersolar.app1 com.intersolar.app2; do
   PLIST="$HOME/Library/LaunchAgents/$label.plist"
   if [[ -f "$PLIST" ]] && launchctl list 2>/dev/null | grep -q "$label"; then
-    yellow "→ Reloading $label…"
-    launchctl unload "$PLIST" 2>/dev/null || true
-    launchctl load   "$PLIST"
+    yellow "→ Restarting $label (killing + re-launching kiosk Chrome)…"
+    launchctl kickstart -k "gui/$UID_NUM/$label"
     RELOADED=$((RELOADED + 1))
   fi
 done
@@ -93,5 +100,5 @@ if [[ "$RELOADED" -eq 0 ]]; then
   yellow "→ No kiosk LaunchAgent is currently loaded."
   echo "  Run ./kiosk/install.sh app1   (or app2) to install + start one."
 else
-  green "✓ Reloaded $RELOADED kiosk LaunchAgent(s) — kiosk should be back up within a few seconds."
+  green "✓ Restarted $RELOADED kiosk LaunchAgent(s) — kiosk is back up with the new files."
 fi

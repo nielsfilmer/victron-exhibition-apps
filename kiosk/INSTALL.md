@@ -249,9 +249,11 @@ This:
   local changes, or isn't on the `main` branch (so it never clobbers
   on-site edits).
 - Pulls the latest `main` from GitHub via fast-forward only.
-- Reloads any loaded kiosk LaunchAgent (`com.intersolar.app1` /
-  `app2`) so the running kiosk picks up the new files within a few
-  seconds.
+- Restarts any loaded kiosk LaunchAgent
+  (`launchctl kickstart -k`, which kills the running Chrome and
+  re-launches it) so the running kiosk picks up the new files
+  within a few seconds. The screen will go briefly black during
+  the restart.
 - Prints the list of new commits applied so the operator sees what
   changed.
 

@@ -91,8 +91,11 @@ plus scripts that boot a Mac into either app in Chrome kiosk mode.
   them as a user LaunchAgent so the kiosk auto-starts on login.
   `update.sh` pulls the latest `main` from GitHub (fast-forward
   only, refuses on uncommitted local changes or off-main HEAD) and
-  reloads the loaded LaunchAgent so the running kiosk picks up new
-  files without manual intervention.
+  uses `launchctl kickstart -k` to KILL + restart the loaded
+  LaunchAgent (Chrome doesn't reliably react to SIGTERM in
+  `--kiosk` mode, so a plain `unload` + `load` would leave the
+  old Chrome running and the operator wouldn't see the update —
+  `kickstart -k` is bullet-proof).
 - **Project root `*.command` files** — `Install App 1.command`,
   `Install App 2.command`, `Update.command`. Double-click-from-Finder
   wrappers around `kiosk/install.sh` / `kiosk/update.sh` for
