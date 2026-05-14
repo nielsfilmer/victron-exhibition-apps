@@ -31,7 +31,8 @@ intersolar-tv-apps/
     ├── launch-app2.sh
     ├── com.intersolar.app1.plist
     ├── com.intersolar.app2.plist
-    ├── install.sh
+    ├── install.sh          # one-shot LaunchAgent install / uninstall
+    ├── update.sh           # pull latest from GitHub + reload the kiosk
     └── INSTALL.md          # full kiosk-Mac + touchscreen setup + show-floor ops
 ```
 

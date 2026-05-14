@@ -38,6 +38,21 @@ buttons, touch-event behaviour that doesn't trigger pinch-zoom).
 Do these steps **once** when preparing a fresh Mac. They're independent
 of which app (App 1 or App 2) you'll deploy — you'll pick that in step 3.
 
+> **About running shell commands:** every command in this guide that
+> looks like `sudo …` or starts with `./` runs in the macOS **Terminal**
+> app — *not* the Spotlight search bar, the URL bar, or anywhere else.
+>
+> To open Terminal: press **⌘ + Space** to open Spotlight → type
+> **Terminal** → press **Enter**. A black-or-white window with a `$`
+> (or `%`) prompt appears. To run a command, click into the window,
+> paste the command, press **Enter**. When prompted for the password
+> by `sudo`, type the admin password (the cursor doesn't move while
+> you type — that's normal) and press **Enter**.
+>
+> If you've never used Terminal before, that's it — paste, Enter, wait
+> for the next prompt, paste the next command. Don't add any extra
+> characters.
+
 ### 2.1 Update macOS to the latest version
 The apps are tested against the latest stable macOS only.
 
@@ -91,6 +106,25 @@ prompts about which browser to use.
 1. Download Chrome from <https://www.google.com/chrome/> and install.
 2. Open Chrome → menu → **Settings → Default browser → Make default**.
 
+### 2.7b Install Git (Xcode Command Line Tools)
+The project is installed and updated via `git`, which isn't on a
+brand-new Mac by default.
+
+In Terminal:
+
+```bash
+xcode-select --install
+```
+
+A system dialog pops up — click **Install**, accept the licence, wait
+for the download to finish (a few minutes). To verify, in Terminal:
+
+```bash
+git --version
+```
+
+You should see something like `git version 2.39.x`.
+
 ### 2.8 Install fonts (App 1 only)
 App 1 uses Museo Sans 700 for slide titles and Inter for body. Both are
 needed for the design to render correctly:
@@ -109,12 +143,25 @@ needed for the design to render correctly:
 
 ## 3. Install the project
 
-### 3.1 Copy the project folder
-Copy the entire `intersolar-tv-apps/` folder to the Mac. A common
-location is `~/Documents/intersolar-tv-apps/`, but **the folder can
-live anywhere** — `kiosk/install.sh` resolves the absolute path on
-install. Don't rename the folder after install (or re-run
-`install.sh`).
+### 3.1 Clone the project from GitHub
+Don't download a zip — clone the repo so updates are a single command
+(see §3.6). In Terminal:
+
+```bash
+cd ~/Documents
+git clone https://github.com/nielsfilmer/victron-exhibition-apps.git
+cd victron-exhibition-apps
+```
+
+This creates `~/Documents/victron-exhibition-apps/` containing the
+whole project. **Don't rename or move the folder after install** —
+the LaunchAgent gets the absolute path baked in. If you do need to
+move it later, re-run `./kiosk/install.sh app1` (or `app2`) from the
+new location to refresh the path.
+
+> The folder *can* live elsewhere (e.g. `~/victron-exhibition-apps`
+> or on an external drive). `Documents/` is just the convention so
+> on-site staff know where to look.
 
 ### 3.2 Pick which app to run
 - **App 1** — slideshow with countdown / pause / variants. Use this
@@ -124,18 +171,29 @@ install. Don't rename the folder after install (or re-run
   experience.
 
 ### 3.3 Install the LaunchAgent
-From the project folder:
+In Terminal, from inside the project folder
+(`~/Documents/victron-exhibition-apps`):
 
 ```bash
-./kiosk/install.sh app1     # OR: ./kiosk/install.sh app2
+./kiosk/install.sh app1     # for App 1 (slideshow)
+# OR
+./kiosk/install.sh app2     # for App 2 (chapter video)
 ```
 
-This:
-- Templates the project's absolute path into
+You should see (for app1):
+
+```
+Installed and loaded com.intersolar.app1.
+Start now:   launchctl start com.intersolar.app1
+Logs:        /Users/<you>/Documents/victron-exhibition-apps/kiosk/app1.out.log / app1.err.log
+```
+
+What just happened:
+- The script templated the project's absolute path into
   `kiosk/com.intersolar.app{1,2}.plist`,
-- Copies the plist to `~/Library/LaunchAgents/`,
-- Loads it via `launchctl` so it runs on every login,
-- Sets the launch script executable.
+- Copied the plist to `~/Library/LaunchAgents/`,
+- Loaded it via `launchctl` so it runs on every login,
+- Set the launch script executable.
 
 The kiosk will now start automatically at login, restart automatically
 if Chrome quits unexpectedly, and write logs to
@@ -153,7 +211,7 @@ common cause is the project folder having moved since `install.sh` ran
 There's no in-app toggle (each kiosk runs one app at a time). **Always
 uninstall the current app before installing the other** — otherwise
 both LaunchAgents are loaded and both apps fight to take over the
-foreground:
+foreground. In Terminal:
 
 ```bash
 ./kiosk/install.sh uninstall app1
@@ -161,6 +219,30 @@ foreground:
 ```
 
 (Or vice versa.) Reboot to verify only the new app starts.
+
+### 3.6 Updating the kiosk to the latest version
+When new content / fixes are pushed to GitHub, in Terminal:
+
+```bash
+./kiosk/update.sh
+```
+
+This:
+- Refuses to run if the project isn't a git clone, has uncommitted
+  local changes, or isn't on the `main` branch (so it never clobbers
+  on-site edits).
+- Pulls the latest `main` from GitHub via fast-forward only.
+- Reloads any loaded kiosk LaunchAgent (`com.intersolar.app1` /
+  `app2`) so the running kiosk picks up the new files within a few
+  seconds.
+- Prints the list of new commits applied so the operator sees what
+  changed.
+
+If `update.sh` bails out with a "local changes detected" message,
+it's because someone edited files on the kiosk Mac directly (e.g.
+adjusted slide content in `config.js`). The script tells you the
+two options — `git stash` (set them aside, can be restored) or
+`git checkout -- .` (discard them, **destructive**).
 
 ---
 
@@ -286,6 +368,8 @@ profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 | App 1's title font looks generic / wrong shape | Museo Sans isn't installed (§2.8). Install the TTF from `app1-slideshow/fonts/`. |
 | Video plays but you hear nothing | **By design** — kiosk video is muted. (Browsers also block autoplay of un-muted video.) |
 | Kiosk doesn't auto-start after a reboot | Auto-login isn't on (§2.2), or the project folder moved (re-run `./kiosk/install.sh app1`). Check `kiosk/app1.err.log`. |
+| `./kiosk/update.sh` says "not a git repo" | Project was downloaded as a zip rather than cloned. Re-clone per §3.1 (back up `app1-slideshow/config.js` and `app2-chapters/config.js` first if you've edited them). |
+| `./kiosk/update.sh` says "local changes detected" | Someone edited a file on the kiosk Mac directly. Either save the change properly (`git stash` to set aside, can be restored), or discard with `git checkout -- .` (destructive — permanent). |
 
 ### 7.4 Exiting kiosk mode for service
 Two ways:

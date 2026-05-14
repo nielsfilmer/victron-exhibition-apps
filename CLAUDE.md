@@ -89,6 +89,10 @@ plus scripts that boot a Mac into either app in Chrome kiosk mode.
 - `kiosk/` — `launch-app{1,2}.sh`, `com.intersolar.app{1,2}.plist`,
   `install.sh`. Templates `__PROJECT_DIR__` into the plists and loads
   them as a user LaunchAgent so the kiosk auto-starts on login.
+  `update.sh` pulls the latest `main` from GitHub (fast-forward
+  only, refuses on uncommitted local changes or off-main HEAD) and
+  reloads the loaded LaunchAgent so the running kiosk picks up new
+  files without manual intervention.
 
 ## Hard project constraints
 
@@ -335,6 +339,7 @@ intersolar-tv-apps/             # local folder; repo is victron-exhibition-apps
 │   ├── config.js              # window.APP_CONFIG = { video, buttons[…], debug }
 │   └── media/main.mp4         # placeholder Sintel trailer (replace for production)
 └── kiosk/
+    ├── update.sh              # git pull + reload kiosk LaunchAgent
     ├── launch-app1.sh         # exec'd by LaunchAgent; opens Chrome --kiosk
     ├── launch-app2.sh
     ├── com.intersolar.app1.plist
