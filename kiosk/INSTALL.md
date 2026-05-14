@@ -125,20 +125,6 @@ git --version
 
 You should see something like `git version 2.39.x`.
 
-### 2.8 Install fonts (App 1 only)
-App 1 uses Museo Sans 700 for slide titles and Inter for body. Both are
-needed for the design to render correctly:
-
-- **Museo Sans 700** — already shipped with the project at
-  `app1-slideshow/fonts/museosans-700.ttf` and loaded via `@font-face`,
-  so no system install is needed. Just leave the file where it is.
-- **Inter** — free under the SIL Open Font License. Download from
-  <https://fonts.google.com/specimen/Inter>, unzip, and install the
-  `.ttf` files into `~/Library/Fonts/` (double-click each in Finder
-  → "Install Font"). If you skip this step, the slide body text
-  silently falls back to the macOS system font (San Francisco) —
-  readable but visually different from the Figma reference.
-
 ---
 
 ## 3. Install the project
@@ -365,7 +351,6 @@ profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 | Chrome "Restore session?" prompt visible | `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot. |
 | App 2 has red dashed boxes over chapter buttons | `debug: true` is still set in `app2-chapters/config.js` — change to `false` and reload. |
 | Update notification pops up | macOS notifications weren't fully muted (§2.5). Fix it during downtime. |
-| App 1's title font looks generic / wrong shape | Museo Sans isn't installed (§2.8). Install the TTF from `app1-slideshow/fonts/`. |
 | Video plays but you hear nothing | **By design** — kiosk video is muted. (Browsers also block autoplay of un-muted video.) |
 | Kiosk doesn't auto-start after a reboot | Auto-login isn't on (§2.2), or the project folder moved (re-run `./kiosk/install.sh app1`). Check `kiosk/app1.err.log`. |
 | `./kiosk/update.sh` says "not a git repo" | Project was downloaded as a zip rather than cloned. Re-clone per §3.1 (back up `app1-slideshow/config.js` and `app2-chapters/config.js` first if you've edited them). |
