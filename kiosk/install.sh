@@ -13,6 +13,45 @@ PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 AGENT_DIR="$HOME/Library/LaunchAgents"
 mkdir -p "$AGENT_DIR"
 
+# macOS TCC protects these user folders. LaunchAgents invoked by /bin/bash
+# can't read scripts living under them — the script silently fails with
+# "Operation not permitted" and the kiosk never starts. Refuse install up
+# front and tell the operator how to fix.
+refuse_if_protected_path() {
+  local p="$PROJECT_DIR"
+  local protected_dirs=(
+    "$HOME/Documents"
+    "$HOME/Desktop"
+    "$HOME/Downloads"
+    "$HOME/Pictures"
+    "$HOME/Movies"
+    "$HOME/Music"
+  )
+  for prefix in "${protected_dirs[@]}"; do
+    if [[ "$p" == "$prefix" || "$p" == "$prefix/"* ]]; then
+      cat >&2 <<EOF
+✖ Refusing to install: project lives in a TCC-protected folder.
+
+  Project path:  $p
+  Protected by:  macOS TCC ($prefix)
+
+  When the LaunchAgent runs at boot, /bin/bash can't read scripts from
+  ~/Documents, ~/Desktop, ~/Downloads, ~/Pictures, ~/Movies, or ~/Music.
+  The agent fails silently with "Operation not permitted" and the kiosk
+  never starts.
+
+  Fix — move the project out, then re-run install from the new location:
+
+    mv "$p" "$HOME/$(basename "$p")"
+    cd "$HOME/$(basename "$p")"
+    ./kiosk/install.sh ${1:-app1}
+
+EOF
+      exit 1
+    fi
+  done
+}
+
 install_one() {
   local which="$1"
   local label="com.intersolar.$which"
@@ -20,6 +59,8 @@ install_one() {
   local dst="$AGENT_DIR/$label.plist"
 
   if [[ ! -f "$src" ]]; then echo "Missing $src" >&2; exit 1; fi
+
+  refuse_if_protected_path "$which"
 
   /usr/bin/sed "s|__PROJECT_DIR__|$PROJECT_DIR|g" "$src" > "$dst"
   chmod +x "$PROJECT_DIR/kiosk/launch-$which.sh"

@@ -133,20 +133,25 @@ Don't download a zip — clone the repo so updates are a single command
 (see §3.6). In Terminal:
 
 ```bash
-cd ~/Documents
+cd ~
 git clone https://github.com/nielsfilmer/victron-exhibition-apps.git
 cd victron-exhibition-apps
 ```
 
-This creates `~/Documents/victron-exhibition-apps/` containing the
-whole project. **Don't rename or move the folder after install** —
-the LaunchAgent gets the absolute path baked in. If you do need to
-move it later, re-run `./kiosk/install.sh app1` (or `app2`) from the
-new location to refresh the path.
+This creates `~/victron-exhibition-apps/` containing the whole
+project. **Don't rename or move the folder after install** — the
+LaunchAgent gets the absolute path baked in. If you do need to move
+it later, re-run `./kiosk/install.sh app1` (or `app2`) from the new
+location to refresh the path.
 
-> The folder *can* live elsewhere (e.g. `~/victron-exhibition-apps`
-> or on an external drive). `Documents/` is just the convention so
-> on-site staff know where to look.
+> ⚠ **Don't clone into `~/Documents/`, `~/Desktop/`, `~/Downloads/`,
+> `~/Pictures/`, `~/Movies/`, or `~/Music/`.** macOS protects these
+> folders via TCC; LaunchAgents can't read scripts from them and the
+> kiosk will silently fail to start at boot ("Operation not permitted"
+> in `kiosk/app1.err.log`). `install.sh` refuses to install if the
+> project is in one of these locations. The home directory itself
+> (`~/`) is fine, as is anywhere else outside the protected list
+> (e.g. an external drive mounted under `/Volumes/`).
 
 ### 3.2 Pick which app to run
 - **App 1** — slideshow with countdown / pause / variants. Use this
@@ -157,7 +162,7 @@ new location to refresh the path.
 
 ### 3.3 Install the LaunchAgent
 In Terminal, from inside the project folder
-(`~/Documents/victron-exhibition-apps`):
+(`~/victron-exhibition-apps`):
 
 ```bash
 ./kiosk/install.sh app1     # for App 1 (slideshow)
@@ -170,8 +175,13 @@ You should see (for app1):
 ```
 Installed and loaded com.intersolar.app1.
 Start now:   launchctl start com.intersolar.app1
-Logs:        /Users/<you>/Documents/victron-exhibition-apps/kiosk/app1.out.log / app1.err.log
+Logs:        /Users/<you>/victron-exhibition-apps/kiosk/app1.out.log / app1.err.log
 ```
+
+If instead you see a "**Refusing to install: project lives in a
+TCC-protected folder**" error, the project was cloned into one of
+the protected locations (see §3.1). Follow the `mv` command shown
+in the error to move it out, then re-run `./kiosk/install.sh app1`.
 
 What just happened:
 - The script templated the project's absolute path into
@@ -305,6 +315,7 @@ profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 | Update notification pops up | macOS notifications weren't fully muted (§2.5). Fix it during downtime. |
 | Video plays but you hear nothing | **By design** — kiosk video is muted. (Browsers also block autoplay of un-muted video.) |
 | Kiosk doesn't auto-start after a reboot | Auto-login isn't on (§2.2), or the project folder moved (re-run `./kiosk/install.sh app1`). Check `kiosk/app1.err.log`. |
+| `kiosk/app1.err.log` (or app2) says "Operation not permitted" | Project lives in a TCC-protected folder (`~/Documents/`, `~/Desktop/`, `~/Downloads/`, `~/Pictures/`, `~/Movies/`, `~/Music/`). LaunchAgents can't read scripts from these. Move the project to `~/` (or anywhere else outside the protected list) and re-run `./kiosk/install.sh app1`. See §3.1 for the full list. |
 | `./kiosk/update.sh` says "not a git repo" | Project was downloaded as a zip rather than cloned. Re-clone per §3.1 (back up `app1-slideshow/config.js` and `app2-chapters/config.js` first if you've edited them). |
 | `./kiosk/update.sh` says "local changes detected" | Someone edited a file on the kiosk Mac directly. Either save the change properly (`git stash` to set aside, can be restored), or discard with `git checkout -- .` (destructive — permanent). |
 
