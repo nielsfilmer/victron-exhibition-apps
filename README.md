@@ -31,8 +31,17 @@ intersolar-tv-apps/
     ├── launch-app2.sh
     ├── com.intersolar.app1.plist
     ├── com.intersolar.app2.plist
-    └── install.sh
+    ├── install.sh          # one-shot LaunchAgent install / uninstall
+    ├── update.sh           # pull latest from GitHub + reload the kiosk
+    └── INSTALL.md          # full kiosk-Mac + touchscreen setup + show-floor ops
 ```
+
+> **Setting up a fresh kiosk Mac, configuring the touchscreen, or
+> handing the install to a non-developer Victron staffer?** Use
+> [`kiosk/INSTALL.md`](./kiosk/INSTALL.md) — that's the operational
+> manual (hardware checklist, macOS setup, daily start/stop
+> procedure, troubleshooting). This `README.md` covers the **app
+> internals** (config schema, slide variants, animation timings).
 
 Each app folder is self-contained: drop the folder anywhere on the kiosk Mac
 and open `index.html` in Chrome — no build step, no server.
@@ -163,70 +172,14 @@ isn't an issue in production).
 
 ---
 
-## Mac kiosk setup (macOS Sequoia / 15)
+## Mac kiosk setup
 
-The kiosk Mac should be a dedicated machine — these steps assume nothing else
-is running on it.
+Full step-by-step Mac + touchscreen + show-floor-operations manual lives in
+[`kiosk/INSTALL.md`](./kiosk/INSTALL.md). It's the single source of truth
+for: hardware checklist, macOS setup (auto-login, power-failure restart,
+display resolution, notifications), `./kiosk/install.sh` usage,
+hardware connections, daily start/close, and troubleshooting.
 
-### 1. Prerequisites
-
-- macOS Sequoia (15.x), latest update.
-- Google Chrome installed at `/Applications/Google Chrome.app`.
-- The project folder copied somewhere on disk (e.g. `~/intersolar-tv-apps`).
-- **Fonts** — App 1's slide titles use **Museo Sans 700**, self-hosted from
-  `app1-slideshow/fonts/museosans-700.ttf` via an `@font-face` rule. **No
-  network calls.** Body text falls back to the system sans-serif stack
-  (San Francisco on macOS) if Inter isn't installed locally — visually close
-  enough to the Figma reference for kiosk distance viewing.
-
-### 2. Auto-login
-
-`System Settings → Users & Groups → Automatically log in as → <kiosk user>`.
-You'll need to disable FileVault for auto-login to work.
-
-### 3. Disable sleep, screensaver, notifications
-
-```bash
-# Display + system sleep off (caffeinate inside the launcher also covers this).
-sudo pmset -a displaysleep 0 sleep 0 disksleep 0
-
-# Hide the Dock and menu bar autohide is handled by Chrome --kiosk.
-# Notifications: System Settings → Notifications → turn on Do Not Disturb 24/7.
-```
-
-### 4. Install the LaunchAgent
-
-```bash
-cd /path/to/intersolar-tv-apps
-./kiosk/install.sh app1     # OR: ./kiosk/install.sh app2
-```
-
-This templates the absolute project path into the plist, copies it to
-`~/Library/LaunchAgents/`, and loads it. The agent will run on every login
-(`RunAtLoad`) and restart the kiosk if Chrome quits unexpectedly
-(`KeepAlive.SuccessfulExit = false`).
-
-Logs land in `kiosk/app1.out.log` / `app1.err.log` (or `app2.*`).
-
-### 5. Verify
-
-Reboot the Mac. After auto-login, Chrome should come up fullscreen running
-the app. To exit kiosk mode for maintenance:
-
-- `Cmd+Option+Esc` → force-quit Google Chrome, **or**
-- `launchctl unload ~/Library/LaunchAgents/com.intersolar.app1.plist`
-
-To uninstall the auto-launch entirely:
-
-```bash
-./kiosk/install.sh uninstall app1
-```
-
-### Troubleshooting
-
-| Symptom | Fix |
-|---|---|
-| Black screen, no Chrome | Check `kiosk/app1.err.log`. Most likely the project moved and the plist still points to the old path — re-run `./kiosk/install.sh app1`. |
-| Chrome shows "Restore pages?" | Profile got marked crashed. The launcher script auto-strips this on next start; if it persists, delete `~/.kiosk-app1-profile`. |
-| Video doesn't autoplay | The launcher passes `--autoplay-policy=no-user-gesture-required`; if you opened the file manually in regular Chrome, autoplay may be blocked. |
-| Hotspots in App 2 look misaligned | Set `"debug": true` and recalibrate `x/y/width/height` against the visible buttons in the video. |
+This file (`README.md`) covers the **app internals** — config schema, slide
+variants, animation timings — and intentionally doesn't duplicate the ops
+manual to avoid drift between the two.
