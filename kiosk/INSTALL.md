@@ -1,10 +1,10 @@
 # Kiosk install & operations guide
 
 Step-by-step setup for a brand-new touchscreen kiosk (Mac + Iiyama
-touchscreen TV) running App 1 or App 2. Written for a non-developer
+touchscreen) running App 1 or App 2. Written for a non-developer
 Victron staffer to follow at the show.
 
-> **Already-configured kiosk?** Skip to [Daily operations](#daily-operations).
+> **Already-configured kiosk?** Skip to [Daily operations](#6-daily-operations).
 >
 > **For details about the apps themselves** (config schema, slide
 > variants, animation timings) see the project root [`README.md`](../README.md).
@@ -16,20 +16,20 @@ Victron staffer to follow at the show.
 
 The combination below is what we ship with — these models have been
 tested through several shows and meet the kiosk's particular
-requirements (4K, capacitive multi-touch, hardware lock for the front
-buttons, touch-event behaviour that doesn't trigger pinch-zoom).
+requirements (capacitive multi-touch, touch-event behaviour that
+doesn't trigger pinch-zoom).
 
 | | Recommendation | Why this exact one |
 |---|---|---|
-| Touchscreen TV | **Iiyama ProLite TE5512MIS** (4K, 55") or newer in the same series | The front power/menu buttons can be hardware-locked from the remote, the touch surface plays nicely with macOS, and the iiWare OS lets us pin HDMI 1 as the start-up channel. |
+| Touchscreen | **IIyama ProLite TF1633MSC** (15.6", Full HD 1920×1080, open-frame) or newer in the same series | Capacitive multi-touch, USB-powered touch, plays nicely with macOS. Open-frame mounting fits the demo enclosure. |
 | Computer | **Apple Mac Mini M2** (8 CPU / 10 GPU, 8 GB / 256 GB) or newer | Mac is **mandatory**: Windows can't reliably disable multi-finger pinch-zoom gestures, which break the kiosk app. |
 | Keyboard | Apple Magic Keyboard (any layout) | Needed only for one-time setup and on-site troubleshooting. The kiosk doesn't need it during the show. |
 | Mouse | None | The touchscreen IS the input device. |
-| Cabling | HDMI cable Mac → TV HDMI 1, USB cable Mac → TV USB | Power: Mac, TV, optional powered USB hub. |
+| Cabling | HDMI cable Mac → touchscreen HDMI in, USB cable Mac → touchscreen USB-B | Power: Mac, touchscreen (12 V DC adapter), optional powered USB hub. |
 
 > **Don't substitute a Samsung touchscreen or a Windows PC.** We've
 > tried both at previous shows; neither delivers on the combination of
-> requirements (front-button lock + touch-without-pinch-zoom).
+> requirements (touch-without-pinch-zoom + reliable kiosk auto-start).
 
 ---
 
@@ -91,13 +91,12 @@ A macOS update banner over the slideshow is a bad look at a trade show.
 - Schedule a 24/7 **Do Not Disturb** focus mode
 
 ### 2.6 Set display resolution
-Our app targets 4K (3840×2160) primary, scales linearly down to 1080p
-(1920×1080). Set the Mac's display output to match the touchscreen's
-native resolution.
+Our app targets 4K primary and scales linearly down to 1080p. Set the
+Mac's display output to the touchscreen's **native** resolution.
 
-`System Settings → Displays → Resolution → Scaled` → pick **3840×2160**
-on the Iiyama TE5512MIS. Hover the resolution tiles to see the px
-values.
+`System Settings → Displays → Resolution → Scaled` → pick the
+touchscreen's native resolution (**1920×1080** for the IIyama
+TF1633MSC). Hover the resolution tiles to see the px values.
 
 ### 2.7 Install Chrome and make it default
 The kiosk only ever uses Chrome; making it default avoids any Mac
@@ -232,54 +231,12 @@ two options — `git stash` (set them aside, can be restored) or
 
 ---
 
-## 4. Touchscreen TV (iiWare OS) setup
-
-The Iiyama TE-series ships with the iiWare OS. Configure it once with
-the TV remote — these settings make the touchscreen behave like a
-single-purpose kiosk display rather than a smart-TV.
-
-To open iiWare: press **Input** on the remote, select the **iiWare**
-channel.
-
-> Settings paths verified against the previous "Showmaster V1.4"
-> manual (Iiyama ProLite TE5512MIS, iiWare firmware Dec 2024). The
-> Iiyama menu structure changes occasionally between firmware
-> revisions — if a path doesn't match, look for an equivalently-named
-> setting in the same parent menu.
-
-| Setting path | Value |
-|---|---|
-| Personal → Screensaver | **Never** |
-| Personal → System bar channel settings | **Disable in all channels** |
-| Input & Output → Touch sounds | **Off** |
-| System → Start up & Shut down → Startup channel | **HDMI 1** |
-| System → Start up & Shut down → Standby after startup | **Off** |
-| System → Start up & Shut down → Start up logo | **Off** |
-| System → Start up & Shut down → Energy saving | **Off** |
-| Administrator (password `8428` = VICT) → Wake on LAN | **Off** |
-| Administrator → HDMI CEC | **Off** |
-| Administrator → Wake on active source | **On** |
-| Administrator → Kiosk mode | **None** |
-| Top-right "Sun" icon | Swipe right for **max brightness** |
-
-Then:
-- Press **green button** on the remote to **lock the front buttons** of
-  the touchscreen. Visitors can't power-cycle or open menus from the
-  bezel any more. (The button is a toggle — press again to unlock for
-  service.)
-- Do **not** press the yellow button — that locks the touch surface
-  itself, which would break the kiosk.
-
-Test that touch still works after locking the front buttons.
-
----
-
-## 5. Updating content during a show
+## 4. Updating content during a show
 
 ### App 1 — slideshow
 - Slide content (image / video, title, subtitle, body, variant,
   duration, loop): edit `app1-slideshow/config.js`. Save and reload
-  the kiosk (see [§7 Operations](#daily-operations) — quit Chrome,
+  the kiosk (see [§6 Operations](#6-daily-operations) — quit Chrome,
   it auto-relaunches).
 - Add a new image: drop the file into `app1-slideshow/media/`,
   reference its filename from `config.js`. Same for videos
@@ -302,28 +259,23 @@ timings) see [`README.md`](../README.md).
 
 ---
 
-## 6. Hardware connections (each kiosk)
+## 5. Hardware connections (each kiosk)
 
 | Cable | From | To |
 |---|---|---|
-| HDMI | Mac Mini | Touchscreen **HDMI 1** (back) |
-| USB | Mac Mini | Touchscreen **USB** (back) — provides the touch input |
+| HDMI | Mac Mini | Touchscreen HDMI input |
+| USB | Mac Mini | Touchscreen USB-B — provides the touch input |
 | Power | Mac Mini | Wall / power strip |
-| Power | Touchscreen | Wall / power strip |
-
-The HDMI 1 channel is what iiWare auto-selects on startup (see §4).
+| Power | Touchscreen | 12 V DC adapter → wall / power strip |
 
 ---
 
-## 7. Daily operations
+## 6. Daily operations
 
-### 7.1 Opening the stand (each touchscreen)
-1. Power on the touchscreen with the **red on/off button** on the TV remote (front-aim at the screen).
+### 6.1 Opening the stand (each touchscreen)
+1. Power on the touchscreen at its on/off button (or just energise the power strip — the touchscreen comes on automatically when power is applied).
 2. The Mac Mini auto-powers when its power strip comes on (because of `setrestartpowerfailure`). If it didn't, press its on/off button on the back-right.
-3. The TV starts on HDMI 1 → the Mac shows the kiosk fullscreen automatically.
-
-If the Mac doesn't appear:
-- Press **Input** on the TV remote, select **HDMI 1**.
+3. The Mac shows the kiosk fullscreen automatically.
 
 If the kiosk doesn't appear but the Mac desktop is visible:
 1. Force-quit Chrome: `⌘+⌥+Esc → Google Chrome → Force Quit`.
@@ -336,17 +288,17 @@ If Chrome shows "Restore previous session?" — the launch script
 auto-strips this on next start. If it persists, delete the kiosk
 profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 
-### 7.2 Closing the stand
+### 6.2 Closing the stand
 - Power off the touchscreen and the Mac at the power strip. They'll
   come back automatically next time the strip is energised.
 - Wipe the touchscreen with a damp soft cloth or pre-moistened wet
   wipe (no abrasive cloths; no paper towels).
 
-### 7.3 Troubleshooting
+### 6.3 Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| Black touchscreen, kiosk Mac is on | TV is on a wrong channel — Input → HDMI 1. |
+| Black touchscreen, kiosk Mac is on | Verify HDMI cable is seated at both ends and the touchscreen is powered. |
 | Mac desktop visible instead of the kiosk | Force-quit Chrome (`⌘+⌥+Esc`); LaunchAgent relaunches within 10 s. |
 | Chrome "Restore session?" prompt visible | `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot. |
 | App 2 has red dashed boxes over chapter buttons | `debug: true` is still set in `app2-chapters/config.js` — change to `false` and reload. |
@@ -356,7 +308,7 @@ profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 | `./kiosk/update.sh` says "not a git repo" | Project was downloaded as a zip rather than cloned. Re-clone per §3.1 (back up `app1-slideshow/config.js` and `app2-chapters/config.js` first if you've edited them). |
 | `./kiosk/update.sh` says "local changes detected" | Someone edited a file on the kiosk Mac directly. Either save the change properly (`git stash` to set aside, can be restored), or discard with `git checkout -- .` (destructive — permanent). |
 
-### 7.4 Exiting kiosk mode for service
+### 6.4 Exiting kiosk mode for service
 Two ways:
 1. `⌘+⌥+Esc → Google Chrome → Force Quit` (LaunchAgent will relaunch in ~10 s — if you want it to stay closed:
    `launchctl unload ~/Library/LaunchAgents/com.intersolar.app1.plist`).
@@ -366,12 +318,3 @@ To uninstall the auto-launch entirely:
 ```bash
 ./kiosk/install.sh uninstall app1
 ```
-
----
-
-## 8. Show-floor escalation
-If everything above fails, contact the project maintainer (Niels
-Filmer, niels@eviloverlord.nl) with:
-- Which app (App 1 / App 2)
-- Last 50 lines of `kiosk/app{1,2}.err.log`
-- A photo of what's actually on the touchscreen
