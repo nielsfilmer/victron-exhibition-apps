@@ -306,7 +306,10 @@
     border: 1px solid var(--btn-border);
     color: var(--white);
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
+    /* No cursor — the body sets `cursor: none` for the kiosk; explicitly
+       repeat it here so the user-agent's default `cursor: pointer` for
+       <button> elements can't override it. */
+    cursor: none;
     padding: 0;
     transition: transform 120ms var(--ease), filter 200ms var(--ease);
   }
