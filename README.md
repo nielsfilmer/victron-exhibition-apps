@@ -26,6 +26,9 @@ intersolar-tv-apps/
 │   ├── index.html
 │   ├── config.js
 │   └── media/           # main.mp4 (placeholder)
+├── Install App 1.command   # double-click in Finder → install App 1 kiosk
+├── Install App 2.command   # double-click in Finder → install App 2 kiosk
+├── Update.command          # double-click in Finder → pull latest + reload
 └── kiosk/
     ├── launch-app1.sh
     ├── launch-app2.sh

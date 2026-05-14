@@ -161,8 +161,24 @@ location to refresh the path.
   experience.
 
 ### 3.3 Install the LaunchAgent
-In Terminal, from inside the project folder
-(`~/victron-exhibition-apps`):
+**Easy mode (no Terminal needed)** — open the project folder in
+Finder (`~/victron-exhibition-apps`) and **double-click**:
+
+- `Install App 1.command` — for App 1 (slideshow)
+- `Install App 2.command` — for App 2 (chapter video)
+
+A Terminal window opens automatically, runs the install, and prints
+the success / failure message. Press any key to close the window
+when it's done.
+
+> First time you double-click a `.command` file, macOS may ask
+> "Are you sure you want to open it?" Click **Open**. If macOS
+> instead refuses with "cannot be opened because it is from an
+> unidentified developer", right-click the file → **Open** → click
+> **Open** in the dialog. This grants permission once, permanently.
+
+**Terminal mode** (equivalent — any of these work the same as the
+Easy-mode buttons):
 
 ```bash
 ./kiosk/install.sh app1     # for App 1 (slideshow)
@@ -216,7 +232,13 @@ foreground. In Terminal:
 (Or vice versa.) Reboot to verify only the new app starts.
 
 ### 3.6 Updating the kiosk to the latest version
-When new content / fixes are pushed to GitHub, in Terminal:
+When new content / fixes are pushed to GitHub:
+
+**Easy mode** — in Finder, open the project folder and **double-click
+`Update.command`**. A Terminal window opens, pulls the latest version,
+reloads the kiosk, and prints what changed.
+
+**Terminal mode** (equivalent):
 
 ```bash
 ./kiosk/update.sh
