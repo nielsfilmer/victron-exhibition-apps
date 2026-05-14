@@ -93,6 +93,16 @@ plus scripts that boot a Mac into either app in Chrome kiosk mode.
   only, refuses on uncommitted local changes or off-main HEAD) and
   reloads the loaded LaunchAgent so the running kiosk picks up new
   files without manual intervention.
+- **Project root `*.command` files** — `Install App 1.command`,
+  `Install App 2.command`, `Update.command`. Double-click-from-Finder
+  wrappers around `kiosk/install.sh` / `kiosk/update.sh` for
+  non-developer operators. Each one `cd`s to its own folder so
+  Finder's launch directory doesn't matter, runs the underlying
+  shell script, prints a banner + success/failure summary, and
+  pauses on "Press any key" so the Terminal window stays open
+  long enough to read. Don't change the filenames (operators
+  bookmark them) and keep the +x bit committed in git so a fresh
+  clone is double-clickable straight away.
 
 ## Hard project constraints
 
