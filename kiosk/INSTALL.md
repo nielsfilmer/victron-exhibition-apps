@@ -93,13 +93,17 @@ prompts about which browser to use.
 
 ### 2.8 Install fonts (App 1 only)
 App 1 uses Museo Sans 700 for slide titles and Inter for body. Both are
-needed for the design to render correctly. Install them by
-double-clicking the files in `~/Library/Fonts/`:
+needed for the design to render correctly:
 
-- `app1-slideshow/fonts/museosans-700.ttf` (shipped with the project)
-- Inter — install separately if you have a license; otherwise the body
-  text falls back to the macOS system font (San Francisco), which is
-  visually close enough at kiosk distance.
+- **Museo Sans 700** — already shipped with the project at
+  `app1-slideshow/fonts/museosans-700.ttf` and loaded via `@font-face`,
+  so no system install is needed. Just leave the file where it is.
+- **Inter** — free under the SIL Open Font License. Download from
+  <https://fonts.google.com/specimen/Inter>, unzip, and install the
+  `.ttf` files into `~/Library/Fonts/` (double-click each in Finder
+  → "Install Font"). If you skip this step, the slide body text
+  silently falls back to the macOS system font (San Francisco) —
+  readable but visually different from the Figma reference.
 
 ---
 
@@ -146,15 +150,17 @@ common cause is the project folder having moved since `install.sh` ran
 — re-run `./kiosk/install.sh app1` (or `app2`) to refresh the path.
 
 ### 3.5 Switching between App 1 and App 2
-There's no in-app toggle (each kiosk runs one app at a time). To
-switch:
+There's no in-app toggle (each kiosk runs one app at a time). **Always
+uninstall the current app before installing the other** — otherwise
+both LaunchAgents are loaded and both apps fight to take over the
+foreground:
 
 ```bash
 ./kiosk/install.sh uninstall app1
 ./kiosk/install.sh app2
 ```
 
-(Or vice versa.) Reboot to verify.
+(Or vice versa.) Reboot to verify only the new app starts.
 
 ---
 
@@ -166,6 +172,12 @@ single-purpose kiosk display rather than a smart-TV.
 
 To open iiWare: press **Input** on the remote, select the **iiWare**
 channel.
+
+> Settings paths verified against the previous "Showmaster V1.4"
+> manual (Iiyama ProLite TE5512MIS, iiWare firmware Dec 2024). The
+> Iiyama menu structure changes occasionally between firmware
+> revisions — if a path doesn't match, look for an equivalently-named
+> setting in the same parent menu.
 
 | Setting path | Value |
 |---|---|
@@ -247,8 +259,10 @@ If the Mac doesn't appear:
 
 If the kiosk doesn't appear but the Mac desktop is visible:
 1. Force-quit Chrome: `⌘+⌥+Esc → Google Chrome → Force Quit`.
-2. The LaunchAgent will relaunch the kiosk within ~10 s (the
-   `KeepAlive`/`ThrottleInterval` from the plist).
+2. The LaunchAgent will relaunch the kiosk almost immediately (the
+   plist's `ThrottleInterval: 10` is a *minimum* gap — relaunch may
+   be near-instant when Chrome was up for more than 10 s before
+   quitting).
 
 If Chrome shows "Restore previous session?" — the launch script
 auto-strips this on next start. If it persists, delete the kiosk
@@ -267,7 +281,6 @@ profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 | Black touchscreen, kiosk Mac is on | TV is on a wrong channel — Input → HDMI 1. |
 | Mac desktop visible instead of the kiosk | Force-quit Chrome (`⌘+⌥+Esc`); LaunchAgent relaunches within 10 s. |
 | Chrome "Restore session?" prompt visible | `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot. |
-| Kiosk launches but isn't fullscreen | Press `fn+f` on the Mac keyboard to toggle Chrome fullscreen. |
 | App 2 has red dashed boxes over chapter buttons | `debug: true` is still set in `app2-chapters/config.js` — change to `false` and reload. |
 | Update notification pops up | macOS notifications weren't fully muted (§2.5). Fix it during downtime. |
 | App 1's title font looks generic / wrong shape | Museo Sans isn't installed (§2.8). Install the TTF from `app1-slideshow/fonts/`. |
