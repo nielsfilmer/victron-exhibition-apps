@@ -36,10 +36,10 @@ intersolar-tv-apps/
     └── INSTALL.md          # full kiosk-Mac + touchscreen setup + show-floor ops
 ```
 
-> **Setting up a fresh kiosk Mac, configuring the touchscreen TV, or
+> **Setting up a fresh kiosk Mac, configuring the touchscreen, or
 > handing the install to a non-developer Victron staffer?** Use
 > [`kiosk/INSTALL.md`](./kiosk/INSTALL.md) — that's the operational
-> manual (hardware checklist, iiWare TV settings, daily start/stop
+> manual (hardware checklist, macOS setup, daily start/stop
 > procedure, troubleshooting). This `README.md` covers the **app
 > internals** (config schema, slide variants, animation timings).
 
@@ -177,8 +177,8 @@ isn't an issue in production).
 Full step-by-step Mac + touchscreen + show-floor-operations manual lives in
 [`kiosk/INSTALL.md`](./kiosk/INSTALL.md). It's the single source of truth
 for: hardware checklist, macOS setup (auto-login, power-failure restart,
-display resolution, notifications, fonts), `./kiosk/install.sh` usage,
-Iiyama iiWare TV configuration, daily start/close, and troubleshooting.
+display resolution, notifications), `./kiosk/install.sh` usage,
+hardware connections, daily start/close, and troubleshooting.
 
 This file (`README.md`) covers the **app internals** — config schema, slide
 variants, animation timings — and intentionally doesn't duplicate the ops
