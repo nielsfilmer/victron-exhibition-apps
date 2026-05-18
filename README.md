@@ -1,7 +1,7 @@
 # Intersolar TV Apps
 
-Two standalone HTML kiosk apps for touchscreen TVs at the Intersolar exhibition,
-plus scripts to boot a Mac into either app in Chrome kiosk mode.
+Three standalone HTML kiosk apps for touchscreen TVs at the Intersolar exhibition,
+plus scripts to boot a Mac into any of them in Chrome kiosk mode.
 
 > ## Runtime environment
 >
@@ -26,15 +26,28 @@ intersolar-tv-apps/
 │   ├── index.html
 │   ├── config.js
 │   └── media/           # main.mp4 (placeholder)
+├── app3-multi-screen/   # 3-screen synced slideshow (center has controls)
+│   ├── index.html
+│   ├── config.js
+│   ├── fonts/
+│   └── media/           # slide-N-{left,middle,right}.jpg
 ├── Install App 1.command   # double-click in Finder → install App 1 kiosk
 ├── Install App 2.command   # double-click in Finder → install App 2 kiosk
+├── Install App 3.command   # double-click in Finder → install App 3 (4 LaunchAgents)
 ├── Update.command          # double-click in Finder → pull latest code + reload
 ├── Update media.command    # double-click in Finder → download latest media zip + reload
 └── kiosk/
     ├── launch-app1.sh
     ├── launch-app2.sh
+    ├── launch-app3-center.sh / launch-app3-left.sh / launch-app3-right.sh
+    ├── launch-app3-ws.sh    # tiny WebSocket relay that syncs the 3 App 3 windows
+    ├── app3-displays.env    # operator-editable display geometry for App 3
     ├── com.intersolar.app1.plist
     ├── com.intersolar.app2.plist
+    ├── com.intersolar.app3-ws.plist
+    ├── com.intersolar.app3-center.plist / app3-left.plist / app3-right.plist
+    ├── ws-relay/            # Go source + build.sh for the App 3 sync relay
+    ├── bin/                 # prebuilt arm64 + x86_64 relay binaries (committed)
     ├── install.sh           # one-shot LaunchAgent install / uninstall
     ├── update.sh            # pull latest code from GitHub + reload the kiosk
     ├── content-update.sh    # download media zip from content-team URL + reload
@@ -122,6 +135,67 @@ window.APP_CONFIG = {
 | `slideshow.transitionMs` | Crossfade duration between slides (default `700`). |
 | `pauseMinutes` | Minutes to keep the slideshow paused after the pause button is pressed (default `5`). After this elapses the countdown starts over from empty. Set to `0` to keep paused indefinitely until manually resumed. |
 | `controlsAlign` | `"left"` (default) or `"right"`. Pins the controls cluster to the bottom-left or bottom-right of the screen. The button order is preserved either way. When set to `"right"`, the `large-image` variant auto-flips its image to the left edge so the controls don't sit on top of it. |
+
+---
+
+## App 3 — Synced 3-Screen Slideshow
+
+**Behaviour**
+- Three Chrome `--kiosk` instances, one per display (center / left / right).
+- All three show fullscreen photos or videos (`object-fit: cover`).
+- The **center** display also hosts the controls cluster from App 1
+  (back / pagination / next + countdown ring / pause) and is the only
+  touchscreen / input device.
+- Every slide change on the center is **broadcast to the left + right
+  instances** via a tiny localhost-only WebSocket relay so all three
+  screens stay in lockstep. Pause, swipe, and auto-advance are all
+  authoritative on the center; satellites just mirror what they're
+  told.
+
+**Architecture**
+- Three separate Chrome `--kiosk` processes (one per display, each
+  with its own `--user-data-dir`) — needed because `--kiosk` only
+  covers one display at a time on macOS.
+- One small Go binary (`kiosk/bin/kiosk-ws-relay-{arm64,x86_64}`,
+  ~5 MB, committed to the repo) listens on `127.0.0.1:8743` and
+  rebroadcasts each message to all OTHER connections. Source +
+  `build.sh` live in `kiosk/ws-relay/`.
+- The relay caches the last message and replays it to new connects,
+  so a late-joining satellite immediately catches up to the center's
+  state without waiting for the next broadcast.
+- This is a documented exception to the "no server requirement" rule
+  in `CLAUDE.md` — see the hard-constraints section there.
+
+**`config.js`** (loaded by `index.html` via a `<script>` tag — works over plain `file://`, no server needed)
+```js
+window.APP_CONFIG = {
+  slideshow: {
+    images: [
+      { left: "media/slide-1-left.jpg", middle: "media/slide-1-middle.jpg", right: "media/slide-1-right.jpg" },
+      { left: "media/slide-2-left.jpg", middle: "media/slide-2-middle.mp4", right: "media/slide-2-right.jpg", autoAdvanceMs: 12000 },
+    ],
+    autoAdvanceMs: 8000,
+    transitionMs:  700,
+  },
+  pauseMinutes:  5,
+  controlsAlign: "right",
+  debug:         false,
+  wsUrl:         "ws://127.0.0.1:8743/ws",
+};
+```
+
+| Field | Meaning |
+|---|---|
+| `slideshow.images[]` | Any number of `{left, middle, right, loop?, autoAdvanceMs?}` objects. Each side is independently auto-detected as image or video by file extension (so left can be a video while middle is an image). |
+| `slideshow.images[].loop` | _Videos only._ Applies to all three sides of that slide. Default `true`. |
+| `slideshow.images[].autoAdvanceMs` | _Optional per-slide override_ of the global `slideshow.autoAdvanceMs`. `0` = stay until manual navigation. |
+| `slideshow.autoAdvanceMs` / `transitionMs` / `pauseMinutes` / `controlsAlign` / `debug` | Same semantics as App 1. The controls cluster only ever renders on the center role. |
+| `wsUrl` | WebSocket relay address. Default `ws://127.0.0.1:8743/ws` — only change if you also change the `-addr` flag in `kiosk/launch-app3-ws.sh`. |
+
+**Setup** — three displays, one Mac, one WebSocket relay binary.
+See [`kiosk/INSTALL.md` §3.7](./kiosk/INSTALL.md#37-app-3--multi-screen-setup-do-this-before-kioskinstallsh-app3)
+for the hardware checklist and the seven-step macOS arrangement
+procedure that must happen BEFORE `./kiosk/install.sh app3`.
 
 ---
 

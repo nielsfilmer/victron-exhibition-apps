@@ -17,7 +17,8 @@ cat <<'BANNER'
 
 This will:
   - download the zip from the URL in kiosk/content-url.txt,
-  - REPLACE the media in app1-slideshow/media/ and app2-chapters/media/,
+  - REPLACE the media in app1-slideshow/media/, app2-chapters/media/,
+    and app3-multi-screen/media/,
   - delete the downloaded zip + everything else,
   - restart the running kiosk so the new media is on screen.
 

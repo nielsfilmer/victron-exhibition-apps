@@ -87,7 +87,15 @@ echo
 # changed. kickstart -k is bullet-proof.
 RELOADED=0
 UID_NUM="$(id -u)"
-for label in com.intersolar.app1 com.intersolar.app2; do
+KIOSK_LABELS=(
+  com.intersolar.app1
+  com.intersolar.app2
+  com.intersolar.app3-ws
+  com.intersolar.app3-center
+  com.intersolar.app3-left
+  com.intersolar.app3-right
+)
+for label in "${KIOSK_LABELS[@]}"; do
   PLIST="$HOME/Library/LaunchAgents/$label.plist"
   if [[ -f "$PLIST" ]] && launchctl list 2>/dev/null | grep -q "$label"; then
     yellow "→ Restarting $label (killing + re-launching kiosk Chrome)…"
@@ -98,7 +106,7 @@ done
 
 if [[ "$RELOADED" -eq 0 ]]; then
   yellow "→ No kiosk LaunchAgent is currently loaded."
-  echo "  Run ./kiosk/install.sh app1   (or app2) to install + start one."
+  echo "  Run ./kiosk/install.sh app1   (or app2, or app3) to install + start one."
 else
   green "✓ Restarted $RELOADED kiosk LaunchAgent(s) — kiosk is back up with the new files."
 fi

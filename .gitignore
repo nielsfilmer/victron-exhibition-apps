@@ -30,3 +30,6 @@ kiosk/*.err.log
 # Chrome kiosk profile directories (created at runtime in $HOME)
 .kiosk-app1-profile/
 .kiosk-app2-profile/
+.kiosk-app3-center-profile/
+.kiosk-app3-left-profile/
+.kiosk-app3-right-profile/

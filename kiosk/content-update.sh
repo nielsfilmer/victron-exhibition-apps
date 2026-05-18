@@ -9,8 +9,9 @@
 #   1. Read the zip URL from kiosk/content-url.txt
 #   2. Download to a temp dir
 #   3. Unzip
-#   4. Locate app{1,2}-{slideshow,chapters}/media/ inside the extracted
-#      tree (at root, or one level deep)
+#   4. Locate each app's media/ folder inside the extracted tree
+#      (at root, or one level deep): app1-slideshow/media/,
+#      app2-chapters/media/, app3-multi-screen/media/
 #   5. REPLACE the local media/ folders with the new content
 #      (existing files are removed first)
 #   6. Delete the temp dir + everything else from the zip
@@ -22,7 +23,7 @@
 #     CSS, fonts, the launch scripts — all left alone.
 #   - To restore the original committed media (if a content update
 #     went wrong), run:
-#       git checkout -- app1-slideshow/media app2-chapters/media
+#       git checkout -- app1-slideshow/media app2-chapters/media app3-multi-screen/media
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -111,7 +112,7 @@ find_media_dir() {
 }
 
 # 6. Replace local media/ with extracted media/
-APPS=(app1-slideshow app2-chapters)
+APPS=(app1-slideshow app2-chapters app3-multi-screen)
 REPLACED=0
 SKIPPED=()
 for app in "${APPS[@]}"; do
@@ -146,7 +147,15 @@ fi
 #    running Chrome and re-launches.
 UID_NUM="$(id -u)"
 RELOADED=0
-for label in com.intersolar.app1 com.intersolar.app2; do
+KIOSK_LABELS=(
+  com.intersolar.app1
+  com.intersolar.app2
+  com.intersolar.app3-ws
+  com.intersolar.app3-center
+  com.intersolar.app3-left
+  com.intersolar.app3-right
+)
+for label in "${KIOSK_LABELS[@]}"; do
   PLIST="$HOME/Library/LaunchAgents/$label.plist"
   if [[ -f "$PLIST" ]] && launchctl list 2>/dev/null | grep -q "$label"; then
     yellow "→ Restarting $label…"

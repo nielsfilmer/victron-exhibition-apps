@@ -135,16 +135,26 @@ request-changes review (self-review on your own PR), fall back to
 
 ## What this project is
 
-Two standalone HTML kiosk apps for touchscreen TVs at an exhibition stand,
-plus scripts that boot a Mac into either app in Chrome kiosk mode.
+Three standalone HTML kiosk apps for touchscreen TVs at an exhibition stand,
+plus scripts that boot a Mac into any of them in Chrome kiosk mode.
 
 - `app1-slideshow/` — Victron-branded slideshow with four layout variants,
   countdown ring + pause button, line-by-line title animation.
 - `app2-chapters/` — fullscreen video with invisible hotspot buttons that
   jump to per-button timestamps. Debug overlay for hotspot calibration.
-- `kiosk/` — `launch-app{1,2}.sh`, `com.intersolar.app{1,2}.plist`,
-  `install.sh`. Templates `__PROJECT_DIR__` into the plists and loads
-  them as a user LaunchAgent so the kiosk auto-starts on login.
+- `app3-multi-screen/` — synced 3-screen slideshow. The same HTML file
+  runs in three Chrome `--kiosk` instances (one per display); a
+  `?role=center|left|right` URL parameter selects which screen's
+  media + controls it renders. The center is authoritative and
+  broadcasts state to the others via a tiny localhost-only Go
+  WebSocket relay (`kiosk/ws-relay/` source, `kiosk/bin/` prebuilt
+  binaries). See "App 3 architecture" below + the carve-out in
+  "Hard project constraints" for the relay rationale.
+- `kiosk/` — `launch-app{1,2}.sh`, App 3's four launch scripts
+  (`launch-app3-{ws,center,left,right}.sh`), `com.intersolar.app{1,2}.plist`,
+  the four App 3 plists, and `install.sh`. Templates `__PROJECT_DIR__`
+  into the plists and loads them as user LaunchAgents so the kiosk
+  auto-starts on login.
   `update.sh` pulls the latest `main` from GitHub (fast-forward
   only, refuses on uncommitted local changes or off-main HEAD) and
   uses `launchctl kickstart -k` to KILL + restart the loaded
@@ -164,10 +174,11 @@ plus scripts that boot a Mac into either app in Chrome kiosk mode.
   purpose — `set -o pipefail` would kill the script when grep
   finds no matches (i.e. the file ships with only comments), and
   we want to fall through to the friendly "no URL set" error.
-  Recovery from a bad content drop: `git checkout -- app1-slideshow/media app2-chapters/media`
+  Recovery from a bad content drop: `git checkout -- app1-slideshow/media app2-chapters/media app3-multi-screen/media`
   restores the committed defaults.
 - **Project root `*.command` files** — `Install App 1.command`,
-  `Install App 2.command`, `Update.command`, `Update media.command`.
+  `Install App 2.command`, `Install App 3.command`, `Update.command`,
+  `Update media.command`.
   Double-click-from-Finder wrappers around `kiosk/install.sh` /
   `kiosk/update.sh` / `kiosk/content-update.sh` for non-developer
   operators. Each one `cd`s to its own folder so Finder's launch
@@ -185,7 +196,8 @@ These came from the user explicitly and shape every decision:
 1. **100% offline.** The kiosk runs from `file://` on a Mac with no
    guaranteed internet. Don't fetch anything from the network at runtime.
    - No CDN fonts (Museo Sans is self-hosted at
-     `app1-slideshow/fonts/museosans-700.ttf`).
+     `app1-slideshow/fonts/museosans-700.ttf` and
+     `app3-multi-screen/fonts/museosans-700.ttf`).
    - No `fetch('config.json')` — Chrome blocks `fetch` over `file://`.
      Configs are loaded via `<script src="config.js">` which sets
      `window.APP_CONFIG`.
@@ -193,12 +205,20 @@ These came from the user explicitly and shape every decision:
      `http://` that's allowed anywhere is the W3C SVG namespace URI
      (`xmlns="http://www.w3.org/2000/svg"`) — that's an XML identifier,
      not a fetch.
+   - **App 3 exception:** `app3-multi-screen/index.html` opens a
+     WebSocket to `ws://127.0.0.1:8743/ws` — see constraint #6.
 2. **Standalone folders.** Each app folder must be copy-pasteable onto
    a fresh Mac and "just work" by opening `index.html` in Chrome. No
    build step, no `npm install`, no server.
+   - **App 3 exception:** App 3 by design needs the `kiosk-ws-relay`
+     binary to be running for the three screens to sync. The binary
+     is prebuilt and committed (`kiosk/bin/`), so no toolchain is
+     needed on the kiosk Mac, but App 3 won't function without it.
 3. **Configurable only via `config.js`.** Non-developers should be able
    to swap slide content / hotspot coordinates / pause duration without
-   touching HTML, CSS, or JS.
+   touching HTML, CSS, or JS. App 3 has one additional operator-edited
+   file — `kiosk/app3-displays.env` — for per-Mac display geometry
+   (resolution + left/right display coordinates).
 4. **4K primary, 1080p secondary.** Layouts target 3840×2160 first but
    must scale linearly down to 1920×1080. Done via vw-based sizing
    (width-based units even for vertical dimensions) so the design's
@@ -206,6 +226,26 @@ These came from the user explicitly and shape every decision:
 5. **Non-selectable everything.** Kiosk users can't be allowed to
    accidentally highlight text, drag images, or open context menus.
    See "Common pitfalls" below for the enforcement pattern.
+6. **Local WebSocket relay is the ONLY allowed "server" — and only
+   for App 3.** App 3 needs three Chrome `--kiosk` processes to stay
+   in sync; the file:// origin model rules out BroadcastChannel /
+   localStorage / postMessage across separate Chrome instances, and
+   collapsing them into one process loses per-display `--kiosk`
+   coverage. The relay binary (`kiosk/bin/kiosk-ws-relay-{arm64,x86_64}`,
+   ~5 MB, Go, source in `kiosk/ws-relay/`) listens on `127.0.0.1` only,
+   has no auth (it's loopback-only), and is started as its own
+   LaunchAgent (`com.intersolar.app3-ws`). Rules:
+   - **Loopback only — never bind to `0.0.0.0` or any external
+     interface.** The relay must remain unreachable from the network.
+   - **No other app may add a server.** This carve-out is App 3's
+     alone. Any future feature that's tempted to reach for a server
+     (analytics, multi-Mac sync across stands, etc.) needs an
+     explicit user sign-off before opening the door wider.
+   - **Don't add HTTP routes beyond `/ws` and `/health`.** The
+     simpler the relay's attack surface, the better.
+   - **Update the prebuilt binaries when changing `main.go`** —
+     `cd kiosk/ws-relay && ./build.sh` produces both arch binaries;
+     commit them in the same PR as the source change.
 
 ## Design source of truth
 
@@ -339,6 +379,96 @@ The Victron design system file (referenced earlier in the build) is
   over every hotspot AND a mouse cursor on the touchscreen.
 - No text, no font dependencies, no countdown — much simpler than App 1.
 
+## App 3 architecture (key decisions)
+
+- **Three Chrome `--kiosk` instances**, one per display, each with
+  its own `--user-data-dir`. We tried collapsing to one Chrome
+  process with three windows (postMessage / BroadcastChannel for
+  sync) but `--kiosk` only covers one display at a time on macOS;
+  three separate processes are the only way to get all three
+  displays into true kiosk lockdown.
+- **WebSocket relay binds 127.0.0.1 only.** The Go relay
+  (`kiosk/ws-relay/main.go`) listens on `127.0.0.1:8743/ws`. Each
+  Chrome connects, the center broadcasts state, the relay rebroadcasts
+  to all OTHER connections (sender doesn't get its own echo), and the
+  relay caches the last message + replays it to new connects so late-
+  joining satellites catch up immediately. **Never bind to `0.0.0.0`**
+  (see hard constraint #6).
+- **Center is authoritative.** Only the center responds to user input
+  (buttons + swipe) and runs the auto-advance countdown. Satellites
+  pass `applyState()` over every received message; their button
+  listeners aren't bound. This keeps the slideshow's "source of
+  truth" in one place — splitting authority across windows is
+  needlessly complicated.
+- **`?role=center|left|right` URL parameter** selects which screen
+  this Chrome instance renders. Same `index.html` for all three; the
+  role is set via `body.role-{center,left,right}` class plus a
+  `ROLE_TO_FIELD` map that translates the role to the config-side
+  field name (`center` → `middle`; `left` → `left`; `right` → `right`).
+- **Per-role DOM is built once at boot.** Each slide container has
+  exactly ONE media element — the role's source. Saves DOM weight
+  and per-video preload pressure on satellites (no point loading
+  middle's video on the left machine).
+- **Message format is `{type:'state', index, paused, ts}`.** Single
+  message type that covers both slide-position and pause sync. `ts`
+  is `Date.now()` from the sender; receivers drop messages with
+  `ts <= lastAppliedTs`. The relay doesn't parse — it forwards bytes
+  verbatim and caches the most-recent text frame.
+- **Center re-broadcasts on every WS (re)connect**, even if state
+  hasn't changed. This overwrites any stale cached state in the
+  relay (e.g. after the center crashed and a satellite reconnected
+  in the meantime).
+- **Center ignores incoming state messages** — only it originates
+  them. Without this guard, the center could mirror its own old
+  cached state after a reconnect and lose any in-flight changes.
+- **Auto-reconnect with exponential backoff** (500ms → 8s cap).
+  Both center and satellites reconnect; the relay LaunchAgent has
+  `KeepAlive` so if the relay process crashes, launchd restarts
+  it within ThrottleInterval (10s) and the kiosks reconnect.
+- **Display geometry is operator-edited** in `kiosk/app3-displays.env`.
+  The three `launch-app3-{center,left,right}.sh` scripts source it
+  and pass `--window-position` + `--window-size` to Chrome. Chrome
+  then `--kiosk`-fullscreens on whichever display contains the
+  specified point. The defaults (3× 1920×1080, center as macOS Main
+  Display, left=-1920, right=+1920) cover the most common setup.
+- **No text, no variants, no sinus background.** App 3 is the
+  simplest of the three on the rendering side — just fullscreen
+  media + the App 1 controls cluster on the center. Don't add text
+  overlays to App 3 without an explicit ask; the spec calls for
+  pure fullscreen photos.
+- **Pause behaviour propagates via state.** Center sets
+  `isPaused: true`, broadcasts, satellites mirror — pausing their
+  videos too (so videos on the satellites don't keep playing when
+  the operator pauses the slideshow). Auto-resume timer is
+  center-only; satellites just receive the eventual "unpaused"
+  broadcast.
+- **`debug: true`** restores the cursor (same as App 1/2) AND shows
+  a top-left HUD with role / WS state / current slide / last applied
+  ts. Useful for verifying the sync flow during setup.
+
+## kiosk/ws-relay/ (App 3 sync relay)
+
+- **Tiny Go program**, ~150 lines, single dependency on
+  `github.com/gorilla/websocket`. Binds 127.0.0.1 only.
+- **Prebuilt binaries committed to `kiosk/bin/`** for both Apple
+  Silicon (`kiosk-ws-relay-arm64`) and Intel (`kiosk-ws-relay-x86_64`).
+  The launch script picks the right one via `uname -m`. Don't
+  forget to rebuild + commit both when changing `main.go` — the
+  kiosk Mac has no Go toolchain. `cd kiosk/ws-relay && ./build.sh`
+  rebuilds both.
+- **Build flags**: `-trimpath -ldflags="-s -w"` for reproducible
+  builds across developer machines + stripped symbols (~30% smaller
+  binary).
+- **Two HTTP endpoints**: `/ws` for the WebSocket upgrade, `/health`
+  returns plain `ok` so an operator can `curl http://127.0.0.1:8743/health`
+  without needing a WebSocket client. Don't add more — see hard
+  constraint #6.
+- **Cache-and-replay** for late joiners: the relay holds the most
+  recent text frame in `lastMsg` and writes it to every new
+  connection at `add()` time. This means a satellite that starts up
+  after the center has already broadcast immediately sees the
+  current state without waiting for the next auto-advance.
+
 ---
 
 ## Common pitfalls (encountered in this build — don't redo them)
@@ -425,12 +555,55 @@ The Victron design system file (referenced earlier in the build) is
    the negative inset.
 15. **`caffeinate` is orphaned by the launch scripts.** Pre-existing
    bug, flagged by the PR #14 reviewer: the `trap '… $CAFFEINATE_PID
-   …' EXIT` in `launch-app{1,2}.sh` is discarded by the subsequent
-   `exec "$CHROME"`, so the background `caffeinate -dimsu` outlives
-   the LaunchAgent restart cycle and accumulates across restarts.
-   Not yet fixed — worth a dedicated PR. If you're writing the fix,
-   the canonical pattern is to spawn caffeinate, then `wait` for
-   `$CHROME` in the foreground so the trap fires when Chrome exits.
+   …' EXIT` in `launch-app{1,2,3-*}.sh` is discarded by the
+   subsequent `exec "$CHROME"`, so the background `caffeinate -dimsu`
+   outlives the LaunchAgent restart cycle and accumulates across
+   restarts. Not yet fixed — worth a dedicated PR. If you're writing
+   the fix, the canonical pattern is to spawn caffeinate, then
+   `wait` for `$CHROME` in the foreground so the trap fires when
+   Chrome exits. **Affects all four App 3 launch scripts** the same
+   way — bundle the fix into one PR.
+16. **App 3: WS relay must bind 127.0.0.1, never 0.0.0.0.** The kiosk
+   Mac is often on a public exhibition Wi-Fi. Binding to all interfaces
+   would expose the relay to anyone on the same network, who could
+   then push arbitrary `state` messages and drive the kiosk's slide
+   index. `kiosk/launch-app3-ws.sh` passes `-addr 127.0.0.1:8743`
+   explicitly even though the binary defaults to it — belt-and-braces
+   + in-script documentation that this is deliberate. See hard
+   constraint #6.
+17. **App 3: rebuild + commit BOTH arch binaries when changing
+   `kiosk/ws-relay/main.go`.** The kiosk Mac has no Go toolchain;
+   `kiosk/launch-app3-ws.sh` picks `kiosk/bin/kiosk-ws-relay-$(uname -m)`.
+   `uname -m` returns `arm64` on Apple Silicon and `x86_64` on Intel
+   — those are the exact suffixes `kiosk/ws-relay/build.sh`
+   produces. If you push a `main.go` change without re-running
+   `build.sh` + committing the resulting binaries, the App 3 install
+   succeeds but the relay never starts and the satellites never sync.
+18. **App 3: config field is `middle`, role is `center`.** The
+   geographic field name (`middle`) and the UI-meaningful role name
+   (`center` — the one with the controls) don't match. There's a
+   `ROLE_TO_FIELD = { center: 'middle', left: 'left', right: 'right' }`
+   map in `app3-multi-screen/index.html` that bridges them once at
+   boot. If you rename either side, rename both — and update the
+   inline comment that explains the divergence.
+19. **App 3: relay's lastMsg cache is load-bearing for satellite
+   startup.** On boot, satellites have no way to ask the center for
+   the current state — they just open a WebSocket and wait. Without
+   the relay's `lastMsg`-on-connect replay, a satellite that
+   starts AFTER the center has already broadcast will display its
+   default slide (index 0) until the next center-side broadcast,
+   which could be up to `autoAdvanceMs` later. Don't remove the
+   replay path from `kiosk/ws-relay/main.go`. If you ever need
+   multiple message types, cache per-type rather than dropping the
+   cache entirely.
+20. **App 3: `--window-position` + `--kiosk` decides which display.**
+   Chrome doesn't have a `--display=N` flag. The launch scripts
+   pass `--window-position=X,Y --window-size=W,H` from
+   `app3-displays.env`, then `--kiosk` fullscreens whatever window
+   it's about to create on the display containing (X,Y). This
+   relies on the coordinates in `app3-displays.env` matching the
+   actual macOS display arrangement — see INSTALL.md §3.7 for the
+   pre-install steps that get the arrangement right.
 
 ## Useful commands
 
@@ -440,7 +613,11 @@ The Victron design system file (referenced earlier in the build) is
 # README links and the W3C SVG namespace identifier in `sinus-bg.svg`, which
 # are not actual fetches.
 grep -nE 'https?://' app1-slideshow/index.html app1-slideshow/config.js \
-                      app2-chapters/index.html  app2-chapters/config.js
+                      app2-chapters/index.html  app2-chapters/config.js \
+                      app3-multi-screen/index.html app3-multi-screen/config.js
+# App 3's index.html contains `ws://127.0.0.1:8743/ws` — that's the
+# expected loopback WebSocket, not a network call. It's the only ws://
+# in any runtime file. Hard constraint #6 documents why.
 
 # Check the build runs at 1920×1080 in a fresh Chrome profile
 open -na "Google Chrome" --args \
@@ -450,6 +627,18 @@ open -na "Google Chrome" --args \
 
 # Install the LaunchAgent that boots a Mac into App 1
 ./kiosk/install.sh app1
+
+# Build (or rebuild) the App 3 WebSocket relay binaries — only needed
+# on the developer machine when changing kiosk/ws-relay/main.go.
+# Produces both arm64 + x86_64 in kiosk/bin/.
+cd kiosk/ws-relay && ./build.sh && cd ../..
+
+# Smoke-test the relay locally (without installing the LaunchAgent)
+./kiosk/bin/kiosk-ws-relay-$(uname -m) &
+curl -sf http://127.0.0.1:8743/health  # expect "ok"
+# Then open app3-multi-screen/index.html in 3 Chrome windows with
+# different ?role= params to verify the sync visually.
+kill %1
 
 # Regenerate the .docx user manual from kiosk/INSTALL.md. The build
 # script isn't currently committed — it lives at /tmp/build-installdoc.js
@@ -469,10 +658,11 @@ note at the top); repo on GitHub is `nielsfilmer/victron-exhibition-apps`.
 intersolar-tv-apps/                  # local folder; repo is victron-exhibition-apps
 ├── README.md                       # user-facing app-internals docs
 ├── CLAUDE.md                       # this file — context for Claude
-├── .gitignore                      # excludes .DS_Store, .claude/, *.zip, kiosk logs
+├── .gitignore                      # excludes .DS_Store, .claude/, *.zip, kiosk logs, app3 profiles
 ├── .claude/settings.json           # project-scoped permissions (git/gh pr create+review)
 ├── Install App 1.command           # Finder double-click → installs App 1 kiosk
 ├── Install App 2.command           # Finder double-click → installs App 2 kiosk
+├── Install App 3.command           # Finder double-click → installs App 3 (4 LaunchAgents)
 ├── Update.command                  # Finder double-click → git pull + restart kiosk
 ├── Update media.command            # Finder double-click → pull content zip + restart
 ├── app1-slideshow/
@@ -484,14 +674,36 @@ intersolar-tv-apps/                  # local folder; repo is victron-exhibition-
 │   ├── index.html
 │   ├── config.js                   # window.APP_CONFIG = { video, buttons[…], debug }
 │   └── media/main.mp4              # placeholder Sintel trailer (replace for production)
+├── app3-multi-screen/
+│   ├── index.html                  # reads ?role=center|left|right; renders accordingly
+│   ├── config.js                   # window.APP_CONFIG = { slideshow: { images: [{left,middle,right}] }, wsUrl }
+│   ├── fonts/museosans-700.ttf
+│   └── media/                      # slide-{1..N}-{left,middle,right}.jpg
 └── kiosk/
-    ├── INSTALL.md                  # full setup + show-floor ops manual
-    ├── install.sh                  # templates plist paths + launchctl loads
+    ├── INSTALL.md                  # full setup + show-floor ops manual (incl. §3.7 App 3)
+    ├── install.sh                  # templates plist paths + launchctl loads (app1/app2/app3)
     ├── update.sh                   # git pull + launchctl kickstart -k the kiosk
     ├── content-update.sh           # download content zip + replace media folders
     ├── content-url.txt             # plain-text URL the content-update script reads
     ├── launch-app1.sh              # exec'd by LaunchAgent; opens Chrome --kiosk
     ├── launch-app2.sh
     ├── com.intersolar.app1.plist
-    └── com.intersolar.app2.plist
+    ├── com.intersolar.app2.plist
+    ├── app3-displays.env           # operator-edited display geometry for App 3
+    ├── launch-app3-ws.sh           # picks kiosk/bin/kiosk-ws-relay-$(uname -m)
+    ├── launch-app3-center.sh       # Chrome --kiosk on the macOS Main Display
+    ├── launch-app3-left.sh         # Chrome --kiosk on the left display
+    ├── launch-app3-right.sh        # Chrome --kiosk on the right display
+    ├── com.intersolar.app3-ws.plist
+    ├── com.intersolar.app3-center.plist
+    ├── com.intersolar.app3-left.plist
+    ├── com.intersolar.app3-right.plist
+    ├── ws-relay/                   # Go source for the App 3 sync relay
+    │   ├── main.go
+    │   ├── go.mod / go.sum
+    │   ├── build.sh                # builds both arch binaries into ../bin/
+    │   └── README.md
+    └── bin/                        # prebuilt relay binaries (committed)
+        ├── kiosk-ws-relay-arm64
+        └── kiosk-ws-relay-x86_64
 ```
