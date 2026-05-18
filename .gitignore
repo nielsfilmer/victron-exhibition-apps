@@ -11,8 +11,14 @@
 *.swo
 *~
 
-# Claude Code session state
-.claude/
+# Claude Code session state — everything under .claude/ EXCEPT
+# settings.json (shared project-scoped permissions for the Claude
+# Code PR workflow; documented in CLAUDE.md).
+# NOTE: must be `.claude/*` (with wildcard) not `.claude/` — git
+# can't re-include a file under an excluded directory, but it can
+# under wildcard-excluded contents.
+.claude/*
+!.claude/settings.json
 
 # Build / packaging artifacts
 *.zip
