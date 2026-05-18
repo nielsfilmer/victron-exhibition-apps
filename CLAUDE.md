@@ -96,6 +96,20 @@ plus scripts that boot a Mac into either app in Chrome kiosk mode.
   `--kiosk` mode, so a plain `unload` + `load` would leave the
   old Chrome running and the operator wouldn't see the update —
   `kickstart -k` is bullet-proof).
+- `kiosk/content-update.sh` + `kiosk/content-url.txt` — separate
+  flow for the content team's bulk-media drops. Reads the URL from
+  `content-url.txt` (one URL per file, comment lines `#` ignored),
+  downloads + unzips, locates `app{1,2}-{slideshow,chapters}/media/`
+  inside the extracted tree (accepts both flat and one-level-deep
+  nested layouts), REPLACES the local `media/` folders only (config
+  / HTML / JS / fonts are never touched), deletes the temp
+  extraction, then `kickstart -k`-restarts any loaded LaunchAgent.
+  The URL parsing is a pure-bash read loop (NOT `grep | head`) on
+  purpose — `set -o pipefail` would kill the script when grep
+  finds no matches (i.e. the file ships with only comments), and
+  we want to fall through to the friendly "no URL set" error.
+  Recovery from a bad content drop: `git checkout -- app1-slideshow/media app2-chapters/media`
+  restores the committed defaults.
 - **Project root `*.command` files** — `Install App 1.command`,
   `Install App 2.command`, `Update.command`. Double-click-from-Finder
   wrappers around `kiosk/install.sh` / `kiosk/update.sh` for

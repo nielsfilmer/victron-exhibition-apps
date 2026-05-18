@@ -28,15 +28,18 @@ intersolar-tv-apps/
 │   └── media/           # main.mp4 (placeholder)
 ├── Install App 1.command   # double-click in Finder → install App 1 kiosk
 ├── Install App 2.command   # double-click in Finder → install App 2 kiosk
-├── Update.command          # double-click in Finder → pull latest + reload
+├── Update.command          # double-click in Finder → pull latest code + reload
+├── Update media.command    # double-click in Finder → download latest media zip + reload
 └── kiosk/
     ├── launch-app1.sh
     ├── launch-app2.sh
     ├── com.intersolar.app1.plist
     ├── com.intersolar.app2.plist
-    ├── install.sh          # one-shot LaunchAgent install / uninstall
-    ├── update.sh           # pull latest from GitHub + reload the kiosk
-    └── INSTALL.md          # full kiosk-Mac + touchscreen setup + show-floor ops
+    ├── install.sh           # one-shot LaunchAgent install / uninstall
+    ├── update.sh            # pull latest code from GitHub + reload the kiosk
+    ├── content-update.sh    # download media zip from content-team URL + reload
+    ├── content-url.txt      # one-line URL the content team gives you
+    └── INSTALL.md           # full kiosk-Mac + touchscreen setup + show-floor ops
 ```
 
 > **Setting up a fresh kiosk Mac, configuring the touchscreen, or

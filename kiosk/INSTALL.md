@@ -267,7 +267,46 @@ two options — `git stash` (set them aside, can be restored) or
 
 ## 4. Updating content during a show
 
-### App 1 — slideshow
+### 4.1 Bulk update from a content-team zip (Easy mode)
+When the content team ships a refreshed media package (new slide
+images / videos / chapter video) as a single `.zip`, refresh the
+kiosk in one step:
+
+**One-time setup (per show):** open `kiosk/content-url.txt` in any
+text editor, paste the zip URL the content team sent on a line below
+the comments, save.
+
+**Then, every time there's a new package** — in Finder, open the
+project folder and **double-click `Update media.command`**. A
+Terminal window opens, downloads the zip, replaces the media folders
+in `app1-slideshow/media/` and `app2-chapters/media/` with the new
+content, deletes the downloaded zip + everything else from the
+archive, and restarts the running kiosk so the new media is on
+screen.
+
+**Terminal mode** (equivalent):
+
+```bash
+./kiosk/content-update.sh
+```
+
+What the script does NOT touch: `config.js` files, HTML, JS, CSS,
+fonts, launch scripts. Only the media files. If the new package's
+filenames differ from what `config.js` references, you'll still need
+to update `config.js` manually (see §4.2 below) — agree filenames
+with the content team in advance so config.js can stay untouched.
+
+**Recovering from a bad content update:** if the new zip is wrong,
+restore the original committed media with:
+
+```bash
+git checkout -- app1-slideshow/media app2-chapters/media
+```
+
+Then re-run `./kiosk/update.sh` (or double-click `Update.command`)
+to reload the kiosk.
+
+### 4.2 Manual edits — App 1 (slideshow)
 - Slide content (image / video, title, subtitle, body, variant,
   duration, loop): edit `app1-slideshow/config.js`. Save and reload
   the kiosk (see [§6 Operations](#6-daily-operations) — quit Chrome,
@@ -276,7 +315,7 @@ two options — `git stash` (set them aside, can be restored) or
   reference its filename from `config.js`. Same for videos
   (`.mp4`/`.webm`/`.ogg`).
 
-### App 2 — chapter video
+### 4.3 Manual edits — App 2 (chapter video)
 - Change the video: replace `app2-chapters/media/main.mp4`.
 - Re-calibrate hotspots: set `debug: true` in
   `app2-chapters/config.js`, reload the kiosk, drag a finger over the
