@@ -51,19 +51,29 @@ Every task ends with a pull request. Do **not** push directly to `main`.
    not done; fix the nit, re-run the review on the new commit, and
    only notify the user once the review comes back fully clean.
    Sub-rules:
-   - **Stopping rule — cap at two review rounds.** If round 2
-     surfaces *new* nits that weren't in round 1, notify the user
-     now and mention the round-2+ items in the notification. The
-     senior-dev agent exists to catch what Claude missed, not for
-     open-ended polishing — without this cap, a critically-prompted
-     reviewer can spin indefinitely.
+   - **Stopping rule — cap at two review rounds.** Prime the
+     round-2 reviewer with the round-1 review (paste it into the
+     agent's prompt) so it verifies the specific fixes rather than
+     re-evaluating from scratch. If round 2 surfaces *new* nits
+     that weren't in round 1, notify the user now and mention the
+     round-2+ items in the notification. The senior-dev agent
+     exists to catch what Claude missed, not for open-ended
+     polishing — without this cap, a critically-prompted reviewer
+     can spin indefinitely. **The cap is on novel nits, not
+     re-attempts**: if round 2 says "you fixed it, but
+     inadequately," that's still the round-1 nit — fix it properly
+     and re-review (doesn't burn a round).
    - **Code-quality, doc, and naming nits must always be fixed
      without asking** — these are exactly what the reviewer is
      there to catch.
    - **Only bounce back to the user when a nit asks for a
-     product/UX decision** — different copy wording, different
-     default value, different operator-visible behaviour. "I
-     might prefer it the other way" is a user call, not Claude's.
+     product/UX decision** — different copy wording shown to
+     visitors, different default value, different behaviour
+     visible in the kiosk UI. Log output, debug HUDs, internal
+     naming, code comments, and developer-facing wording are NOT
+     product/UX decisions even if an operator might happen to see
+     them — fix without asking. "I might prefer it the other way"
+     on a visitor-facing decision is a user call, not Claude's.
    - **Off-topic nits get spawned as a follow-up task or separate
      PR** per "One PR = one concern" — e.g. the reviewer says
      "while we're here, the `caffeinate` orphan in pitfall #15 is
