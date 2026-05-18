@@ -47,8 +47,40 @@ Every task ends with a pull request. Do **not** push directly to `main`.
    `--comment`; flag any blocking items explicitly in the body in that
    case). The user sees the review on the PR.
 4. **Address every amendment** the review agent raises before notifying
-   the user. Push follow-up commits to the same PR branch; do not open
-   a second PR for review fixes.
+   the user — **including non-blocking nits**. "LGTM with a nit" is
+   not done; fix the nit, re-run the review on the new commit, and
+   only notify the user once the review comes back fully clean.
+   Sub-rules:
+   - **Stopping rule — cap at two review rounds.** Prime the
+     round-2 reviewer with the round-1 review (paste it into the
+     agent's prompt) so it verifies the specific fixes rather than
+     re-evaluating from scratch. If round 2 surfaces *new* nits
+     that weren't in round 1, notify the user now and mention the
+     round-2+ items in the notification. The senior-dev agent
+     exists to catch what Claude missed, not for open-ended
+     polishing — without this cap, a critically-prompted reviewer
+     can spin indefinitely. **The cap is on novel nits, not
+     re-attempts**: if round 2 says "you fixed it, but
+     inadequately," that's still the round-1 nit — fix it properly
+     and re-review (doesn't burn a round).
+   - **Code-quality, doc, and naming nits must always be fixed
+     without asking** — these are exactly what the reviewer is
+     there to catch.
+   - **Only bounce back to the user when a nit asks for a
+     product/UX decision** — different copy wording shown to
+     visitors, different default value, different behaviour
+     visible in the kiosk UI. Log output, debug HUDs, internal
+     naming, code comments, and developer-facing wording are NOT
+     product/UX decisions even if an operator might happen to see
+     them — fix without asking. "I might prefer it the other way"
+     on a visitor-facing decision is a user call, not Claude's.
+   - **Off-topic nits get spawned as a follow-up task or separate
+     PR** per "One PR = one concern" — e.g. the reviewer says
+     "while we're here, the `caffeinate` orphan in pitfall #15 is
+     worth fixing." Mention the spawn in the user notification so
+     the nit isn't lost.
+   Push follow-up commits to the same PR branch; do not open a
+   second PR for review fixes on this PR's stated concern.
 5. **Notify the user** when the PR is clean and ready for human review
    and merge. Do **not** merge the PR yourself — the user is the
    merge gate.
