@@ -15,9 +15,18 @@
 #   app2-chapters/
 #     media/
 #       main.mp4
+#   app3-multi-screen/
+#     media/
+#       slide-1-left.jpg   slide-1-middle.jpg   slide-1-right.jpg
+#       slide-2-left.jpg   slide-2-middle.jpg   slide-2-right.jpg
+#       …
+#
+# Only the apps the operator is actually running need their media/
+# folder in the zip — missing ones are left untouched on disk.
 #
 # The script accepts a one-level-deep nested layout too (e.g. when the
 # zip extracts into a single top-level folder named after the package):
 #   victron-content-2026/
 #     app1-slideshow/media/…
 #     app2-chapters/media/…
+#     app3-multi-screen/media/…

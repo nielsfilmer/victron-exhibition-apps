@@ -1,8 +1,8 @@
 # Kiosk install & operations guide
 
 Step-by-step setup for a brand-new touchscreen kiosk (Mac + Iiyama
-touchscreen) running App 1 or App 2. Written for a non-developer
-Victron staffer to follow at the show.
+touchscreen) running App 1, App 2, or App 3. Written for a
+non-developer Victron staffer to follow at the show.
 
 > **Already-configured kiosk?** Skip to [Daily operations](#6-daily-operations).
 >
@@ -30,6 +30,25 @@ doesn't trigger pinch-zoom).
 > **Don't substitute a Samsung touchscreen or a Windows PC.** We've
 > tried both at previous shows; neither delivers on the combination of
 > requirements (touch-without-pinch-zoom + reliable kiosk auto-start).
+
+### 1.1 Extra hardware for App 3 (3-screen synced slideshow)
+
+App 3 spans **three displays**: a center display with controls + a
+photo, plus a left and right display each showing a photo, all three
+synced. Only the center display needs to be touchscreen.
+
+| | Recommendation | Notes |
+|---|---|---|
+| Center display | **IIyama ProLite TF1633MSC** (as above, or newer) | Touch — visitors use this one. |
+| Left + right displays | Two more displays at the **same resolution as the center**, ideally matching size for visual continuity | No touch needed. Standard HDMI displays are fine. |
+| Computer | **Apple Mac Mini M2 or newer** | Must have 3 video outputs. The M2 has 1× HDMI + 2× Thunderbolt 4 (each does USB-C → HDMI via a $20 adapter). |
+| HDMI cables | 3× | One per display. |
+| USB cable | 1× | Mac → center touchscreen's USB-B (touch input). |
+| HDMI adapter | 2× USB-C/Thunderbolt → HDMI | For the two non-HDMI Mac outputs. |
+
+For the touch USB-B from the touchscreen, plug into one of the Mac
+Mini's USB-A ports (or via a USB-A → USB-C adapter into a Thunderbolt
+port).
 
 ---
 
@@ -155,10 +174,15 @@ location to refresh the path.
 
 ### 3.2 Pick which app to run
 - **App 1** — slideshow with countdown / pause / variants. Use this
-  for product / story marketing screens.
+  for product / story marketing screens (single display).
 - **App 2** — fullscreen video with invisible chapter buttons.
   Use this for a "press the on-screen image to jump to that section"
-  experience.
+  experience (single display).
+- **App 3** — synced 3-screen slideshow. The middle screen has the
+  same controls as App 1; left + right are passive photo displays.
+  Use this for a wide cinematic kiosk where three photos animate in
+  unison. **Requires the extra hardware in §1.1 and the multi-screen
+  setup in §3.7.**
 
 ### 3.3 Install the LaunchAgent
 **Easy mode (no Terminal needed)** — open the project folder in
@@ -166,6 +190,9 @@ Finder (`~/victron-exhibition-apps`) and **double-click**:
 
 - `Install App 1.command` — for App 1 (slideshow)
 - `Install App 2.command` — for App 2 (chapter video)
+- `Install App 3.command` — for App 3 (3-screen synced slideshow).
+  **Complete §3.7 first** — App 3 needs the 3 displays plugged in
+  and arranged in macOS before install.
 
 A Terminal window opens automatically, runs the install, and prints
 the success / failure message. Press any key to close the window
@@ -184,6 +211,8 @@ Easy-mode buttons):
 ./kiosk/install.sh app1     # for App 1 (slideshow)
 # OR
 ./kiosk/install.sh app2     # for App 2 (chapter video)
+# OR
+./kiosk/install.sh app3     # for App 3 (3-screen synced slideshow)
 ```
 
 You should see (for app1):
@@ -218,18 +247,19 @@ If it doesn't, check `kiosk/app{1,2}.err.log` for the reason. The most
 common cause is the project folder having moved since `install.sh` ran
 — re-run `./kiosk/install.sh app1` (or `app2`) to refresh the path.
 
-### 3.5 Switching between App 1 and App 2
+### 3.5 Switching between App 1, App 2, and App 3
 There's no in-app toggle (each kiosk runs one app at a time). **Always
-uninstall the current app before installing the other** — otherwise
-both LaunchAgents are loaded and both apps fight to take over the
+uninstall the current app before installing another** — otherwise
+multiple LaunchAgents are loaded and the apps fight to take over the
 foreground. In Terminal:
 
 ```bash
-./kiosk/install.sh uninstall app1
-./kiosk/install.sh app2
+./kiosk/install.sh uninstall app1     # or app2, or app3
+./kiosk/install.sh app2               # or app1, or app3
 ```
 
-(Or vice versa.) Reboot to verify only the new app starts.
+Reboot to verify only the new app starts. (Uninstalling `app3` removes
+all four of its LaunchAgents: the ws relay + center + left + right.)
 
 ### 3.6 Updating the kiosk to the latest version
 When new content / fixes are pushed to GitHub:
@@ -263,6 +293,85 @@ adjusted slide content in `config.js`). The script tells you the
 two options — `git stash` (set them aside, can be restored) or
 `git checkout -- .` (discard them, **destructive**).
 
+### 3.7 App 3 — multi-screen setup (do this BEFORE `./kiosk/install.sh app3`)
+
+App 3 runs as **three Chrome `--kiosk` instances** (one per display)
+that sync via a tiny localhost-only WebSocket relay. Get the display
+hardware and macOS arrangement right first; install second.
+
+**Step 1 — plug in all three displays.** Center display via HDMI to
+the Mac's HDMI port; left + right via USB-C/Thunderbolt → HDMI
+adapters into the Mac's Thunderbolt ports. Plug the center
+touchscreen's USB-B into the Mac. Power everything on.
+
+**Step 2 — arrange the displays in macOS.**
+`System Settings → Displays → Arrange…`
+
+In the Arrange pane you'll see three rectangles representing the
+displays. Drag them so they sit in a row left → center → right,
+edges flush. The order in the pane must match the physical layout
+on your stand (the kiosk uses the screen-to-screen coordinates to
+decide which Chrome window opens on which display).
+
+**Step 3 — make the CENTER display the Main Display.** Still in the
+Arrange pane: at the top of the center rectangle there's a white
+strip representing the menu bar. Drag it onto the center rectangle
+if it isn't already there. This sets the center display as the macOS
+"Main Display" — the kiosk install assumes this.
+
+**Step 4 — confirm "Use as separate display" mode.** Not mirrored.
+Each display should show its own desktop wallpaper, not a copy of
+the same one.
+
+**Step 5 — set every display to the same resolution.** Click each
+display tile in turn and set Resolution → Scaled → 1920×1080 (or
+all three to the same higher resolution if your displays support it
+and you've updated `kiosk/app3-displays.env`).
+
+**Step 6 — verify with the default `kiosk/app3-displays.env`.** Open
+that file in any text editor. The defaults assume three 1920×1080
+displays:
+
+```
+DISPLAY_WIDTH=1920
+DISPLAY_HEIGHT=1080
+CENTER_X=0;  CENTER_Y=0      # main display, top-left at (0,0)
+LEFT_X=-1920; LEFT_Y=0       # to the left of center, X is negative
+RIGHT_X=1920; RIGHT_Y=0      # to the right of center, X is positive
+```
+
+If your displays are a different resolution OR the arrangement isn't
+a simple left-center-right row, edit the coordinates accordingly.
+Each pair is the top-left corner of that display in macOS's global
+display coordinate space. (The Main Display's top-left is always
+`(0, 0)`; other displays have negative or positive coordinates
+depending on whether they're to the left or right.)
+
+**Step 7 — install.** Now double-click `Install App 3.command` (or
+run `./kiosk/install.sh app3` in Terminal). The script will install
+**four** LaunchAgents:
+
+- `com.intersolar.app3-ws` — the WebSocket sync relay (localhost only)
+- `com.intersolar.app3-center` — Chrome on the center display
+- `com.intersolar.app3-left` — Chrome on the left display
+- `com.intersolar.app3-right` — Chrome on the right display
+
+After install, reboot to verify all four come up automatically.
+
+**If a satellite (left or right) lands on the wrong display** after
+reboot:
+1. Confirm the System Settings → Displays → Arrange layout matches
+   the kiosk-Mac's physical setup (Step 2).
+2. Confirm the center display is the Main Display (Step 3).
+3. Confirm the coordinates in `kiosk/app3-displays.env` match the
+   arrangement (Step 6).
+4. Restart the kiosk: `./kiosk/update.sh` (it pulls + restarts).
+
+**If the three displays show the same slide but out of sync** (e.g.
+left is one ahead, right is one behind): the WebSocket relay isn't
+running. Check `kiosk/app3-ws.err.log` and confirm the relay binary
+is executable: `ls -l kiosk/bin/kiosk-ws-relay-*`.
+
 ---
 
 ## 4. Updating content during a show
@@ -279,10 +388,10 @@ the comments, save.
 **Then, every time there's a new package** — in Finder, open the
 project folder and **double-click `Update media.command`**. A
 Terminal window opens, downloads the zip, replaces the media folders
-in `app1-slideshow/media/` and `app2-chapters/media/` with the new
-content, deletes the downloaded zip + everything else from the
-archive, and restarts the running kiosk so the new media is on
-screen.
+in `app1-slideshow/media/`, `app2-chapters/media/`, and
+`app3-multi-screen/media/` with the new content, deletes the
+downloaded zip + everything else from the archive, and restarts the
+running kiosk so the new media is on screen.
 
 **Terminal mode** (equivalent):
 
@@ -300,7 +409,7 @@ with the content team in advance so config.js can stay untouched.
 restore the original committed media with:
 
 ```bash
-git checkout -- app1-slideshow/media app2-chapters/media
+git checkout -- app1-slideshow/media app2-chapters/media app3-multi-screen/media
 ```
 
 Then re-run `./kiosk/update.sh` (or double-click `Update.command`)
@@ -315,7 +424,19 @@ to reload the kiosk.
   reference its filename from `config.js`. Same for videos
   (`.mp4`/`.webm`/`.ogg`).
 
-### 4.3 Manual edits — App 2 (chapter video)
+### 4.3 Manual edits — App 3 (3-screen synced slideshow)
+- Slide content (left/middle/right media per slide, duration, loop):
+  edit `app3-multi-screen/config.js`. Save and either reboot the Mac
+  or run `./kiosk/update.sh` to restart all four LaunchAgents.
+- Drop new images / videos into `app3-multi-screen/media/`, reference
+  their filenames from `config.js` under `left:` / `middle:` / `right:`.
+- Display geometry (resolution, layout): edit
+  `kiosk/app3-displays.env` and run `./kiosk/update.sh` to restart.
+- The middle (touch) screen is authoritative — slide changes happen
+  there and propagate to left/right via the local WebSocket relay.
+  If left/right go out of sync, see §6.3 troubleshooting.
+
+### 4.4 Manual edits — App 2 (chapter video)
 - Change the video: replace `app2-chapters/media/main.mp4`.
 - Re-calibrate hotspots: set `debug: true` in
   `app2-chapters/config.js`, reload the kiosk, drag a finger over the
@@ -381,6 +502,10 @@ profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 | `kiosk/app1.err.log` (or app2) says "Operation not permitted" | Project lives in a TCC-protected folder (`~/Documents/`, `~/Desktop/`, `~/Downloads/`, `~/Pictures/`, `~/Movies/`, `~/Music/`). LaunchAgents can't read scripts from these. Move the project to `~/` (or anywhere else outside the protected list) and re-run `./kiosk/install.sh app1`. See §3.1 for the full list. |
 | `./kiosk/update.sh` says "not a git repo" | Project was downloaded as a zip rather than cloned. Re-clone per §3.1 (back up `app1-slideshow/config.js` and `app2-chapters/config.js` first if you've edited them). |
 | `./kiosk/update.sh` says "local changes detected" | Someone edited a file on the kiosk Mac directly. Either save the change properly (`git stash` to set aside, can be restored), or discard with `git checkout -- .` (destructive — permanent). |
+| App 3: left or right display is on the wrong screen | macOS display arrangement doesn't match `kiosk/app3-displays.env`. Re-check §3.7 steps 2-3 (arrangement + Main Display on center) and step 6 (coordinates in displays.env). Then `./kiosk/update.sh`. |
+| App 3: left or right shows the wrong slide | WS relay isn't running. Check `kiosk/app3-ws.err.log` (`tail kiosk/app3-ws.err.log`). Confirm the relay binary is executable for your CPU: `ls -l kiosk/bin/kiosk-ws-relay-$(uname -m)`. Restart with `./kiosk/update.sh`. |
+| App 3: all three displays show the same slide but it never advances | The center Chrome isn't running (it owns auto-advance). Check `kiosk/app3-center.err.log` and confirm `com.intersolar.app3-center` is loaded: `launchctl list \| grep app3-center`. |
+| App 3: blank screen on one of the three displays | That display's Chrome failed to launch. Check the matching `kiosk/app3-{center,left,right}.err.log`. Common cause: the display was disconnected when the kiosk started; reconnect and run `./kiosk/update.sh` to relaunch. |
 
 ### 6.4 Exiting kiosk mode for service
 Two ways:
@@ -390,5 +515,7 @@ Two ways:
 
 To uninstall the auto-launch entirely:
 ```bash
-./kiosk/install.sh uninstall app1
+./kiosk/install.sh uninstall app1     # or app2, or app3
 ```
+
+(For App 3 this removes all four LaunchAgents — relay + center + left + right.)
