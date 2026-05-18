@@ -41,6 +41,13 @@
 //                              When set to "right", the `large-image` variant
 //                              auto-flips its image to the left edge so the
 //                              controls don't sit on top of it.
+//   debug                    — `false` (default) is the kiosk behaviour.
+//                              `true` adds `body.debug` to the document,
+//                              which today restores the native mouse cursor
+//                              (useful for development / testing without a
+//                              touchscreen). The class is shared with App 2
+//                              so future debug toggles (FPS HUD, slide-index
+//                              overlay, etc.) can hang off the same flag.
 window.APP_CONFIG = {
   slideshow: {
     images: [
@@ -99,4 +106,5 @@ window.APP_CONFIG = {
   },
   pauseMinutes: 5,
   controlsAlign: "right",
+  debug: false,
 };
