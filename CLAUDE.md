@@ -53,6 +53,30 @@ Every task ends with a pull request. Do **not** push directly to `main`.
    and merge. Do **not** merge the PR yourself — the user is the
    merge gate.
 
+### Workflow disciplines (lessons from past sessions)
+
+- **One PR = one concern.** Don't tack an unrelated change onto an
+  open PR just because you're already editing nearby files. If the
+  follow-up is orthogonal to the PR's stated goal, branch off `main`
+  for it. (Got this wrong once during the layout work: bundled the
+  image-margin change into the `controlsAlign` PR and had to extract
+  it into its own PR after the user called it out.)
+- **No personal info in public docs.** Strip names, emails, Apple
+  IDs, passwords, and "contact me at…" sections out of any new file
+  before opening the PR. Operational contact details belong in a
+  separate ops vault, not in the repo. (Got this wrong with an
+  early INSTALL.md "Show-floor escalation" chapter.)
+- **Update file maps when adding/removing files.** Both `README.md`'s
+  project-tree code block and CLAUDE.md's File map section need
+  refreshing whenever a file is added to the project root or
+  `kiosk/`. PR reviewers have caught this twice.
+- **Permissions for the workflow** are configured at
+  `.claude/settings.json` (project-scoped) and grant `Bash(git *)`,
+  `Bash(gh pr create *)`, `Bash(gh pr review *)`. Don't expect them
+  to be granted globally — they're per-project on purpose. If
+  permission prompts start interrupting common flows, add the
+  pattern to `.claude/settings.json`, not to `~/.claude/settings.json`.
+
 A reasonable review prompt template (refers to the canonical constraint
 list in this file rather than duplicating it, so the two never drift):
 
@@ -111,15 +135,16 @@ plus scripts that boot a Mac into either app in Chrome kiosk mode.
   Recovery from a bad content drop: `git checkout -- app1-slideshow/media app2-chapters/media`
   restores the committed defaults.
 - **Project root `*.command` files** — `Install App 1.command`,
-  `Install App 2.command`, `Update.command`. Double-click-from-Finder
-  wrappers around `kiosk/install.sh` / `kiosk/update.sh` for
-  non-developer operators. Each one `cd`s to its own folder so
-  Finder's launch directory doesn't matter, runs the underlying
-  shell script, prints a banner + success/failure summary, and
-  pauses on "Press any key" so the Terminal window stays open
-  long enough to read. Don't change the filenames (operators
-  bookmark them) and keep the +x bit committed in git so a fresh
-  clone is double-clickable straight away.
+  `Install App 2.command`, `Update.command`, `Update media.command`.
+  Double-click-from-Finder wrappers around `kiosk/install.sh` /
+  `kiosk/update.sh` / `kiosk/content-update.sh` for non-developer
+  operators. Each one `cd`s to its own folder so Finder's launch
+  directory doesn't matter, runs the underlying shell script, prints
+  a banner + success/failure summary, and pauses on "Press any key"
+  so the Terminal window stays open long enough to read. Don't
+  change the filenames (operators bookmark them) and keep the +x bit
+  committed in git so a fresh clone is double-clickable straight
+  away.
 
 ## Hard project constraints
 
@@ -325,6 +350,41 @@ The Victron design system file (referenced earlier in the build) is
    avoids a flash of incorrect font (Inter → Museo Sans glyph re-flow),
    and the gate ensures line-wrap measurements happen with the final
    glyph widths so the per-line stagger lands on the right words.
+11. **TCC-protected folders silently break the LaunchAgent.** If
+   `$PROJECT_DIR` is inside `~/Documents/`, `~/Desktop/`,
+   `~/Downloads/`, `~/Pictures/`, `~/Movies/`, or `~/Music/`,
+   `/bin/bash` can't read the launch script and the agent fails with
+   EPERM ("Operation not permitted") — Chrome never starts, and there's
+   no UI prompt to grant access. `kiosk/install.sh` has a
+   `refuse_if_protected_path` check that fires before writing
+   anything to `~/Library/LaunchAgents`. Don't remove that check, and
+   don't recommend `~/Documents/` (or sibling folders) in any docs;
+   `~/` is the canonical install location.
+12. **`cursor: pointer` is set by the user-agent stylesheet on every
+   `<button>`.** Body-level `cursor: none` doesn't override it. App
+   1's `.ctrl-btn` and App 2's `.hotspot` both have explicit
+   `cursor: none` — keep it, or the mouse cursor reappears over
+   every control on the touchscreen kiosk.
+13. **Countdown ring must live INSIDE the `<button>` element**, not as
+   a sibling. When it was a sibling: (a) the button's background
+   painted on top of it (DOM-order = paint-order), so the ring
+   "slipped behind" on `:active` press; (b) the ring didn't inherit
+   the button's `transform: scale(.95)` press animation. Both fixed
+   by nesting. Don't move the SVG back outside the button.
+14. **Countdown ring uses `inset: -1px` to cover the button's 1 px
+   border.** `.ctrl-btn` is `width: 96px` with `box-sizing:
+   border-box` and a `1 px solid` border, so the content (padding)
+   box is 94×94. Without `inset: -1px` the ring SVG renders 94×94
+   and a 1 px blue rim shows outside the white stroke. Don't drop
+   the negative inset.
+15. **`caffeinate` is orphaned by the launch scripts.** Pre-existing
+   bug, flagged by the PR #14 reviewer: the `trap '… $CAFFEINATE_PID
+   …' EXIT` in `launch-app{1,2}.sh` is discarded by the subsequent
+   `exec "$CHROME"`, so the background `caffeinate -dimsu` outlives
+   the LaunchAgent restart cycle and accumulates across restarts.
+   Not yet fixed — worth a dedicated PR. If you're writing the fix,
+   the canonical pattern is to spawn caffeinate, then `wait` for
+   `$CHROME` in the foreground so the trap fires when Chrome exits.
 
 ## Useful commands
 
@@ -344,6 +404,14 @@ open -na "Google Chrome" --args \
 
 # Install the LaunchAgent that boots a Mac into App 1
 ./kiosk/install.sh app1
+
+# Regenerate the .docx user manual from kiosk/INSTALL.md. The build
+# script isn't currently committed — it lives at /tmp/build-installdoc.js
+# during the session that writes it. If it's worth re-running often,
+# move it into kiosk/build-docx.sh and chmod +x. The generated file
+# lands at ~/Downloads/Victron Exhibition Kiosk Apps — User Manual …docx
+# for upload to Google Drive.
+NODE_PATH="$(npm root -g)" node /tmp/build-installdoc.js
 ```
 
 ## File map (quick orientation)
@@ -352,24 +420,32 @@ Working-directory name is `intersolar-tv-apps/` (legacy — see naming
 note at the top); repo on GitHub is `nielsfilmer/victron-exhibition-apps`.
 
 ```
-intersolar-tv-apps/             # local folder; repo is victron-exhibition-apps
-├── README.md                  # user-facing setup docs
-├── CLAUDE.md                  # this file — context for Claude
-├── .gitignore                 # excludes .DS_Store, .claude/, *.zip, kiosk logs
+intersolar-tv-apps/                  # local folder; repo is victron-exhibition-apps
+├── README.md                       # user-facing app-internals docs
+├── CLAUDE.md                       # this file — context for Claude
+├── .gitignore                      # excludes .DS_Store, .claude/, *.zip, kiosk logs
+├── .claude/settings.json           # project-scoped permissions (git/gh pr create+review)
+├── Install App 1.command           # Finder double-click → installs App 1 kiosk
+├── Install App 2.command           # Finder double-click → installs App 2 kiosk
+├── Update.command                  # Finder double-click → git pull + restart kiosk
+├── Update media.command            # Finder double-click → pull content zip + restart
 ├── app1-slideshow/
-│   ├── index.html             # all CSS + JS inlined; loads config.js as <script>
-│   ├── config.js              # window.APP_CONFIG = { slideshow: {...}, pauseMinutes }
+│   ├── index.html                  # all CSS + JS inlined; loads config.js as <script>
+│   ├── config.js                   # window.APP_CONFIG = { slideshow: {...}, pauseMinutes }
 │   ├── fonts/museosans-700.ttf
-│   └── media/                 # sinus-bg.svg + slide-{1..5}.jpg (placeholders)
+│   └── media/                      # sinus-bg.svg + slide-{1..5}.jpg (placeholders)
 ├── app2-chapters/
 │   ├── index.html
-│   ├── config.js              # window.APP_CONFIG = { video, buttons[…], debug }
-│   └── media/main.mp4         # placeholder Sintel trailer (replace for production)
+│   ├── config.js                   # window.APP_CONFIG = { video, buttons[…], debug }
+│   └── media/main.mp4              # placeholder Sintel trailer (replace for production)
 └── kiosk/
-    ├── update.sh              # git pull + reload kiosk LaunchAgent
-    ├── launch-app1.sh         # exec'd by LaunchAgent; opens Chrome --kiosk
+    ├── INSTALL.md                  # full setup + show-floor ops manual
+    ├── install.sh                  # templates plist paths + launchctl loads
+    ├── update.sh                   # git pull + launchctl kickstart -k the kiosk
+    ├── content-update.sh           # download content zip + replace media folders
+    ├── content-url.txt             # plain-text URL the content-update script reads
+    ├── launch-app1.sh              # exec'd by LaunchAgent; opens Chrome --kiosk
     ├── launch-app2.sh
     ├── com.intersolar.app1.plist
-    ├── com.intersolar.app2.plist
-    └── install.sh             # templates plist paths + launchctl loads
+    └── com.intersolar.app2.plist
 ```
