@@ -68,5 +68,7 @@ shape:
 - Easy to remember (`8743` → "VKSK" on a phone keypad, "Victron KioSK")
 
 If you change the port, also update:
-- `kiosk/launch-app3-ws.sh` (the `-addr` flag)
-- `app3-multi-screen/index.html` (the `WS_URL` constant)
+- `kiosk/launch-app3-ws.sh` (the `-addr` flag the launcher passes)
+- `app3-multi-screen/config.js` (the `wsUrl` field — the kiosk JS
+  reads this at boot and errors out via the on-screen error overlay
+  if it's missing)

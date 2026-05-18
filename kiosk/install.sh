@@ -122,9 +122,25 @@ install_app3() {
     echo "  Rebuild with: cd kiosk/ws-relay && ./build.sh" >&2
     exit 1
   fi
+  # Trap partial installs — `set -euo pipefail` makes any
+  # `install_label` failure terminate the script, which would leave
+  # whatever previous labels succeeded loaded as LaunchAgents. Tell
+  # the operator how to clean up, rather than dying silently.
+  local installed=()
+  trap '
+    if [[ ${#installed[@]} -gt 0 && ${#installed[@]} -lt ${#APP3_LABELS[@]} ]]; then
+      echo "" >&2
+      echo "✖ Partial install: ${#installed[@]} of ${#APP3_LABELS[@]} App 3 LaunchAgents loaded." >&2
+      echo "  Installed: ${installed[*]}" >&2
+      echo "  Run \"./kiosk/install.sh uninstall app3\" to remove the partial install," >&2
+      echo "  fix the error above, then re-run \"./kiosk/install.sh app3\"." >&2
+    fi
+  ' EXIT
   for label in "${APP3_LABELS[@]}"; do
     install_label "$label"
+    installed+=("$label")
   done
+  trap - EXIT
   echo
   echo "App 3 installed (4 LaunchAgents)."
   echo "Logs:        $PROJECT_DIR/kiosk/app3-{ws,center,left,right}.{out,err}.log"

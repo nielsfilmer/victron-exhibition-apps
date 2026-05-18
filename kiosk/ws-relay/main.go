@@ -44,8 +44,11 @@ func (h *hub) add(c *websocket.Conn) {
 	cached, mt := h.lastMsg, h.lastMT
 	h.mu.Unlock()
 	// Replay cached state so the new client doesn't have to wait
-	// for the next broadcast to know where the slideshow is.
+	// for the next broadcast to know where the slideshow is. Use
+	// the same 2s write deadline as broadcast() so a frozen client
+	// can't block the HTTP handler goroutine indefinitely.
 	if cached != nil {
+		_ = c.SetWriteDeadline(time.Now().Add(2 * time.Second))
 		_ = c.WriteMessage(mt, cached)
 	}
 }

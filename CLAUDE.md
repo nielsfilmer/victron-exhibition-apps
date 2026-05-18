@@ -555,14 +555,17 @@ The Victron design system file (referenced earlier in the build) is
    the negative inset.
 15. **`caffeinate` is orphaned by the launch scripts.** Pre-existing
    bug, flagged by the PR #14 reviewer: the `trap '… $CAFFEINATE_PID
-   …' EXIT` in `launch-app{1,2,3-*}.sh` is discarded by the
-   subsequent `exec "$CHROME"`, so the background `caffeinate -dimsu`
-   outlives the LaunchAgent restart cycle and accumulates across
-   restarts. Not yet fixed — worth a dedicated PR. If you're writing
-   the fix, the canonical pattern is to spawn caffeinate, then
-   `wait` for `$CHROME` in the foreground so the trap fires when
-   Chrome exits. **Affects all four App 3 launch scripts** the same
-   way — bundle the fix into one PR.
+   …' EXIT` in `launch-app{1,2}.sh` and the three App 3 Chrome
+   launchers (`launch-app3-{center,left,right}.sh`) is discarded by
+   the subsequent `exec "$CHROME"`, so the background
+   `caffeinate -dimsu` outlives the LaunchAgent restart cycle and
+   accumulates across restarts. Not yet fixed — worth a dedicated PR.
+   If you're writing the fix, the canonical pattern is to spawn
+   caffeinate, then `wait` for `$CHROME` in the foreground so the
+   trap fires when Chrome exits. **`launch-app3-ws.sh` is unaffected
+   — the ws relay doesn't `caffeinate`** (it's a tiny long-running
+   Go process with no display-sleep concern), so a fix only needs
+   to touch the five Chrome launchers.
 16. **App 3: WS relay must bind 127.0.0.1, never 0.0.0.0.** The kiosk
    Mac is often on a public exhibition Wi-Fi. Binding to all interfaces
    would expose the relay to anyone on the same network, who could

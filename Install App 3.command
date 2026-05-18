@@ -36,6 +36,13 @@ Installing FOUR LaunchAgents that auto-start App 3 every login:
 
 BANNER
 
+# Force the operator to acknowledge the §3.7 prerequisites before
+# the install runs. Pressing any key proceeds; Ctrl+C aborts cleanly
+# (read returns non-zero on signal, which the || exit propagates).
+read -n 1 -s -r -p "Press any key to continue once §3.7 is done, or Ctrl+C to abort..." || { echo; echo "Aborted."; exit 1; }
+echo
+echo
+
 ./kiosk/install.sh app3
 RC=$?
 

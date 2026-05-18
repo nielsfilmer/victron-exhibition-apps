@@ -311,7 +311,14 @@
 
   if (cfg.debug === true) document.body.classList.add('debug');
 
-  const wsUrl = (typeof cfg.wsUrl === 'string' && cfg.wsUrl) ? cfg.wsUrl : 'ws://127.0.0.1:8743/ws';
+  // config.js is the single source of truth for wsUrl — no fallback
+  // here, so the port lives in exactly one place. If an operator
+  // accidentally deletes the field the on-screen error overlay tells
+  // them what's wrong rather than silently connecting to the default.
+  if (typeof cfg.wsUrl !== 'string' || !cfg.wsUrl) {
+    return showError('config.js: missing or empty wsUrl (expected e.g. "ws://127.0.0.1:8743/ws")');
+  }
+  const wsUrl = cfg.wsUrl;
 
   document.documentElement.style.setProperty('--transition-ms', transitionMs + 'ms');
 
@@ -462,18 +469,25 @@
     if (typeof st.ts === 'number' && st.ts <= lastAppliedTs) return;
     if (typeof st.ts === 'number') lastAppliedTs = st.ts;
 
+    // Apply `paused` BEFORE `index` so renderSlide()'s `if (!isPaused)`
+    // video-play branch sees the right pause state on the first apply
+    // after boot. Without this ordering, a satellite that connects
+    // while the operator has the center paused would briefly play the
+    // entering slide's video (one frame) before applyState's second
+    // half pauses it — a visible flicker. setPaused() with broadcast=false
+    // is cheap when the state already matches (idempotent UI update).
+    if (typeof st.paused === 'boolean' && st.paused !== isPaused) {
+      // applyState comes from the wire on satellites; on center, the
+      // user toggled the button locally (and broadcastState was already
+      // called). Either way, mirror the UI + video state.
+      setPaused(st.paused, /*broadcast=*/false);
+    }
     if (typeof st.index === 'number') {
       const n = ((st.index % slides.length) + slides.length) % slides.length;
       if (n !== current) {
         current = n;
         renderSlide(current);
       }
-    }
-    if (typeof st.paused === 'boolean' && st.paused !== isPaused) {
-      // applyState comes from the wire on satellites; on center, the
-      // user toggled the button locally (and broadcastState was already
-      // called). Either way, mirror the UI + video state.
-      setPaused(st.paused, /*broadcast=*/false);
     }
   };
 
