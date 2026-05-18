@@ -281,10 +281,12 @@ The Victron design system file (referenced earlier in the build) is
   propagation so a tap on a button doesn't arm a swipe.
 - **`debug` global config** — `false` (default) hides the mouse
   cursor everywhere via the universal `*` rule (see pitfall #12).
-  `true` adds `body.debug-cursor`, which a sibling CSS rule keys
-  off to restore native cursors (`cursor: auto`) for testing
-  without a touchscreen. No other effect right now — room to
-  grow as more debug toggles get added.
+  `true` adds `body.debug`, which a sibling CSS rule keys off to
+  restore native cursors (`cursor: auto`) for testing without a
+  touchscreen. Class name matches App 2's existing `body.debug`
+  convention so future debug toggles can hang off the same class
+  in both apps. No other effect on App 1 right now — room to
+  grow.
 
 ## App 2 architecture
 

@@ -64,15 +64,16 @@
 
   /* Hide the mouse cursor everywhere in the kiosk. Universal `*` rule
      beats the user-agent stylesheet's `cursor: pointer` default on
-     <button>/<a>, so no per-element override is needed. When
-     `debug: true` is set in config.js, JS adds `body.debug-cursor`
+     `<button>`, so no per-element override is needed. When
+     `debug: true` is set in config.js, JS adds `body.debug`
      and the rule below restores native cursors for testing without
-     a touchscreen. */
+     a touchscreen. Class name matches App 2's existing convention so
+     future debug toggles can hang off the same class in both apps. */
   *, *::before, *::after { cursor: none; }
-  body.debug-cursor,
-  body.debug-cursor *,
-  body.debug-cursor *::before,
-  body.debug-cursor *::after { cursor: auto; }
+  body.debug,
+  body.debug *,
+  body.debug *::before,
+  body.debug *::after { cursor: auto; }
 
   /* Hard guarantee: nothing is ever selectable, draggable, or context-menu-able */
   body, body * {
@@ -480,7 +481,7 @@
   // the universal `* { cursor: none }` rule). Useful for developing /
   // testing without a touchscreen. Must be `true` to enable; any other
   // value (including missing) keeps the kiosk cursor-free.
-  if (cfg.debug === true) document.body.classList.add('debug-cursor');
+  if (cfg.debug === true) document.body.classList.add('debug');
 
   document.documentElement.style.setProperty('--transition-ms', transitionMs + 'ms');
 
