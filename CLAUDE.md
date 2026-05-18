@@ -47,8 +47,14 @@ Every task ends with a pull request. Do **not** push directly to `main`.
    `--comment`; flag any blocking items explicitly in the body in that
    case). The user sees the review on the PR.
 4. **Address every amendment** the review agent raises before notifying
-   the user. Push follow-up commits to the same PR branch; do not open
-   a second PR for review fixes.
+   the user — **including non-blocking nits**. "LGTM with a nit" is
+   not done; fix the nit, re-run the review on the new commit, and
+   only notify the user once the review comes back fully clean.
+   The only acceptable reason to leave a nit unfixed is to bounce it
+   back to the user with a specific question (e.g. the nit asks for
+   a behavioural change the user hasn't signed off on). Push follow-up
+   commits to the same PR branch; do not open a second PR for review
+   fixes.
 5. **Notify the user** when the PR is clean and ready for human review
    and merge. Do **not** merge the PR yourself — the user is the
    merge gate.
