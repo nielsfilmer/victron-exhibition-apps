@@ -1,0 +1,23 @@
+# Paste the URL of the content-team's zip below (one URL, on a single
+# line — no quotes, no leading whitespace, no trailing whitespace).
+# Lines starting with `#` are ignored, so this comment block stays.
+#
+# Example:
+#   https://example.com/path/to/victron-exhibit-content-2026.zip
+#
+# Expected zip layout (only the media folders matter — everything else
+# in the zip is ignored and cleaned up):
+#   app1-slideshow/
+#     media/
+#       slide-1.jpg
+#       slide-2.jpg
+#       …
+#   app2-chapters/
+#     media/
+#       main.mp4
+#
+# The script accepts a one-level-deep nested layout too (e.g. when the
+# zip extracts into a single top-level folder named after the package):
+#   victron-content-2026/
+#     app1-slideshow/media/…
+#     app2-chapters/media/…
