@@ -59,9 +59,20 @@
     background: var(--black);
     color: var(--white);
     font-family: var(--font-body);
-    cursor: none;
     touch-action: none;
   }
+
+  /* Hide the mouse cursor everywhere in the kiosk. Universal `*` rule
+     beats the user-agent stylesheet's `cursor: pointer` default on
+     <button>/<a>, so no per-element override is needed. When
+     `debug: true` is set in config.js, JS adds `body.debug-cursor`
+     and the rule below restores native cursors for testing without
+     a touchscreen. */
+  *, *::before, *::after { cursor: none; }
+  body.debug-cursor,
+  body.debug-cursor *,
+  body.debug-cursor *::before,
+  body.debug-cursor *::after { cursor: auto; }
 
   /* Hard guarantee: nothing is ever selectable, draggable, or context-menu-able */
   body, body * {
@@ -306,10 +317,6 @@
     border: 1px solid var(--btn-border);
     color: var(--white);
     display: flex; align-items: center; justify-content: center;
-    /* No cursor — the body sets `cursor: none` for the kiosk; explicitly
-       repeat it here so the user-agent's default `cursor: pointer` for
-       <button> elements can't override it. */
-    cursor: none;
     padding: 0;
     transition: transform 120ms var(--ease), filter 200ms var(--ease);
   }
@@ -468,6 +475,12 @@
   // back→pagination→next→pause order is preserved either way.
   const controlsAlign = cfg.controlsAlign === 'right' ? 'right' : 'left';
   if (controlsAlign === 'right') document.body.classList.add('controls-right');
+
+  // Debug — restores the native mouse cursor (kiosk normally hides it via
+  // the universal `* { cursor: none }` rule). Useful for developing /
+  // testing without a touchscreen. Must be `true` to enable; any other
+  // value (including missing) keeps the kiosk cursor-free.
+  if (cfg.debug === true) document.body.classList.add('debug-cursor');
 
   document.documentElement.style.setProperty('--transition-ms', transitionMs + 'ms');
 

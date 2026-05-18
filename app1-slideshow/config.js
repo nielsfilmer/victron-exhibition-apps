@@ -41,6 +41,11 @@
 //                              When set to "right", the `large-image` variant
 //                              auto-flips its image to the left edge so the
 //                              controls don't sit on top of it.
+//   debug                    — `false` (default) hides the mouse cursor
+//                              everywhere (kiosk behaviour). Set `true` for
+//                              development / testing without a touchscreen
+//                              so you can see the cursor over buttons and
+//                              swipe areas. No other effect right now.
 window.APP_CONFIG = {
   slideshow: {
     images: [
@@ -99,4 +104,5 @@ window.APP_CONFIG = {
   },
   pauseMinutes: 5,
   controlsAlign: "right",
+  debug: false,
 };

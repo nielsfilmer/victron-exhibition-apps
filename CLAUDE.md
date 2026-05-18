@@ -279,6 +279,12 @@ The Victron design system file (referenced earlier in the build) is
   tracking. Threshold: `max(60px, 4% of viewport width)`, max duration
   600 ms, requires `|dx| > 1.2 × |dy|`. Control buttons stop
   propagation so a tap on a button doesn't arm a swipe.
+- **`debug` global config** — `false` (default) hides the mouse
+  cursor everywhere via the universal `*` rule (see pitfall #12).
+  `true` adds `body.debug-cursor`, which a sibling CSS rule keys
+  off to restore native cursors (`cursor: auto`) for testing
+  without a touchscreen. No other effect right now — room to
+  grow as more debug toggles get added.
 
 ## App 2 architecture
 
@@ -288,13 +294,15 @@ The Victron design system file (referenced earlier in the build) is
   designHeight` reference resolution; they're rendered as percentages of
   the viewport so they stay locked to the visible video regardless of
   display resolution.
-- `debug: true` in `config.js` outlines the hotspots and shows a HUD
-  with the current video time — used during setup to calibrate
-  coordinates against the real production video. **The checked-in
-  `app2-chapters/config.js` currently has `debug: true`** because the
-  production video and final coordinates haven't been provided yet.
-  **Flip it to `false` before the show** or the kiosk will display
-  red calibration outlines over every hotspot.
+- `debug: true` in `config.js` outlines the hotspots, shows a HUD
+  with the current video time, AND restores the native mouse cursor
+  (which is hidden everywhere else by the universal `*` rule) —
+  all useful during setup to calibrate coordinates against the
+  real production video. **The checked-in `app2-chapters/config.js`
+  currently has `debug: true`** because the production video and
+  final coordinates haven't been provided yet. **Flip it to `false`
+  before the show** or visitors will see red calibration outlines
+  over every hotspot AND a mouse cursor on the touchscreen.
 - No text, no font dependencies, no countdown — much simpler than App 1.
 
 ---
@@ -360,11 +368,15 @@ The Victron design system file (referenced earlier in the build) is
    anything to `~/Library/LaunchAgents`. Don't remove that check, and
    don't recommend `~/Documents/` (or sibling folders) in any docs;
    `~/` is the canonical install location.
-12. **`cursor: pointer` is set by the user-agent stylesheet on every
-   `<button>`.** Body-level `cursor: none` doesn't override it. App
-   1's `.ctrl-btn` and App 2's `.hotspot` both have explicit
-   `cursor: none` — keep it, or the mouse cursor reappears over
-   every control on the touchscreen kiosk.
+12. **Universal `* { cursor: none }` is how the kiosk hides the
+   cursor everywhere.** Body-level `cursor: none` alone doesn't work
+   — the user-agent stylesheet sets `cursor: pointer` on every
+   `<button>`/`<a>` and beats body's inherited cursor. The universal
+   `*, *::before, *::after { cursor: none; }` rule (in both apps)
+   beats the UA stylesheet on specificity (author wins) and removes
+   the need for per-element overrides. Don't replace it with a
+   body-only rule. Toggle off for testing via the `debug` config
+   flag — see App 1 / App 2 architecture sections.
 13. **Countdown ring must live INSIDE the `<button>` element**, not as
    a sibling. When it was a sibling: (a) the button's background
    painted on top of it (DOM-order = paint-order), so the ring
