@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Fetch the latest media package from the content team's hosting and
-# replace the kiosk apps' media/ folders with the new content.
+# replace the kiosk apps' media/ folders + config.js files with the
+# new content.
 #
 # Usage:
 #   ./kiosk/content-update.sh
@@ -9,21 +10,30 @@
 #   1. Read the zip URL from kiosk/content-url.txt
 #   2. Download to a temp dir
 #   3. Unzip
-#   4. Locate each app's media/ folder inside the extracted tree
-#      (at root, or one level deep): app1-slideshow/media/,
-#      app2-chapters/media/, app3-multi-screen/media/
-#   5. REPLACE the local media/ folders with the new content
-#      (existing files are removed first)
-#   6. Delete the temp dir + everything else from the zip
-#   7. Restart any loaded kiosk LaunchAgent so the running kiosk
-#      picks up the new media
+#   4. For each app (app1-slideshow / app2-chapters / app3-multi-screen):
+#        - replace local media/ from the zip's app{N}/media/ if present
+#        - replace local config.js from the zip's app{N}/config.js if present
+#      Either or both may be omitted from the zip per app — anything
+#      missing is left untouched on disk.
+#   5. Delete the temp dir + everything else from the zip
+#   6. Restart any loaded kiosk LaunchAgent so the running kiosk picks
+#      up the new files
 #
 # Notes:
-#   - Only the media/ folders are touched. Config files, HTML, JS,
-#     CSS, fonts, the launch scripts — all left alone.
-#   - To restore the original committed media (if a content update
-#     went wrong), run:
-#       git checkout -- app1-slideshow/media app2-chapters/media app3-multi-screen/media
+#   - Only media/ folders and config.js files are touched. HTML, CSS,
+#     fonts, launch scripts, plists, the ws-relay binary, and
+#     app3-displays.env (operator-edited per-Mac hardware geometry)
+#     are NEVER touched by this script — those belong to dev / ops.
+#   - The config.js update path lets the content team ship new slide
+#     copy / hotspot coordinates / left/middle/right mappings
+#     alongside new media without a code change. The risk is real
+#     though: a malformed config.js will fail to load and the kiosk
+#     will show its on-screen error overlay. Recovery below.
+#   - To restore the original committed media + config (if a content
+#     update went wrong), run:
+#       git checkout -- app1-slideshow/{media,config.js} \
+#                       app2-chapters/{media,config.js} \
+#                       app3-multi-screen/{media,config.js}
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -97,26 +107,39 @@ if ! unzip -q "$ZIP" -d "$TMP/unzipped"; then
   exit 1
 fi
 
-# 5. Locate each app's media folder in the extracted tree.
-#    Accept either flat layout (app1-slideshow/media/) or nested under
-#    a single top-level folder (foo/app1-slideshow/media/).
-find_media_dir() {
+# 5. Locate a given path inside the extracted tree. Accepts either flat
+#    layout (app1-slideshow/media/) or nested one level deep under a
+#    single top-level folder (foo/app1-slideshow/media/). Works for
+#    both files (config.js) and directories (media/) — the caller
+#    decides which by passing -d / -f to the existence test.
+find_in_zip() {
   local app="$1"
+  local sub="$2"      # "media" or "config.js"
+  local test_flag="$3" # "-d" or "-f"
   local cand
   for cand in \
-      "$TMP/unzipped/$app/media" \
-      "$TMP"/unzipped/*/"$app"/media; do
-    if [[ -d "$cand" ]]; then echo "$cand"; return 0; fi
+      "$TMP/unzipped/$app/$sub" \
+      "$TMP"/unzipped/*/"$app"/"$sub"; do
+    # `test` (not `[[ ]]`) so the operator flag can come from a
+    # variable — bash parses `[[ ]]` operators at parse time, not
+    # at evaluation time, so `[[ $flag $path ]]` is a syntax error.
+    if test "$test_flag" "$cand"; then echo "$cand"; return 0; fi
   done
   return 1
 }
 
-# 6. Replace local media/ with extracted media/
+# 6. Replace local media/ + config.js per app — each is independent;
+#    a zip may include either, both, or neither for any given app.
+#    Anything missing from the zip is left untouched on disk (matches
+#    the existing media-only behaviour the content team is used to).
 APPS=(app1-slideshow app2-chapters app3-multi-screen)
-REPLACED=0
-SKIPPED=()
+REPLACED_MEDIA=0
+REPLACED_CONFIG=0
+TOUCHED_APPS=()
 for app in "${APPS[@]}"; do
-  if SRC="$(find_media_dir "$app")"; then
+  app_touched=0
+
+  if SRC="$(find_in_zip "$app" "media" -d)"; then
     DEST="$PROJECT_DIR/$app/media"
     yellow "→ Replacing $app/media (from $SRC)…"
     rm -rf "$DEST"
@@ -124,22 +147,47 @@ for app in "${APPS[@]}"; do
     # Copy contents (the dot-slash form preserves dotfiles + avoids
     # nesting the source folder name).
     cp -R "$SRC"/. "$DEST"/
-    REPLACED=$((REPLACED + 1))
-  else
-    SKIPPED+=("$app")
+    REPLACED_MEDIA=$((REPLACED_MEDIA + 1))
+    app_touched=1
+  fi
+
+  if SRC="$(find_in_zip "$app" "config.js" -f)"; then
+    DEST="$PROJECT_DIR/$app/config.js"
+    yellow "→ Replacing $app/config.js (from $SRC)…"
+    cp "$SRC" "$DEST"
+    REPLACED_CONFIG=$((REPLACED_CONFIG + 1))
+    app_touched=1
+  fi
+
+  if [[ $app_touched -eq 1 ]]; then
+    TOUCHED_APPS+=("$app")
   fi
 done
 
-if [[ "$REPLACED" -eq 0 ]]; then
-  red "✖ No media folders were replaced — the zip's layout doesn't match"
-  echo "  the expected structure. See kiosk/content-url.txt for the"
-  echo "  layout the script expects."
+if [[ $((REPLACED_MEDIA + REPLACED_CONFIG)) -eq 0 ]]; then
+  red "✖ Nothing was replaced — the zip's layout doesn't match the"
+  echo "  expected structure (no app{1,2,3}*/media/ folders and no"
+  echo "  app{1,2,3}*/config.js files were found). See"
+  echo "  kiosk/content-url.txt for the layout the script expects."
   exit 1
 fi
 
-green "✓ Replaced $REPLACED media folder(s) with new content."
+green "✓ Replaced $REPLACED_MEDIA media folder(s) + $REPLACED_CONFIG config file(s)."
+# Tell the operator which apps were actually touched — most relevant
+# for them to know which kiosk to keep an eye on after the restart.
+if [[ "${#TOUCHED_APPS[@]}" -gt 0 ]]; then
+  yellow "  Apps updated: ${TOUCHED_APPS[*]}"
+fi
+SKIPPED=()
+for app in "${APPS[@]}"; do
+  found=0
+  for t in "${TOUCHED_APPS[@]}"; do
+    [[ "$t" == "$app" ]] && { found=1; break; }
+  done
+  [[ $found -eq 0 ]] && SKIPPED+=("$app")
+done
 if [[ "${#SKIPPED[@]}" -gt 0 ]]; then
-  yellow "  (No media for: ${SKIPPED[*]} — left untouched.)"
+  yellow "  (Nothing in zip for: ${SKIPPED[*]} — left untouched.)"
 fi
 
 # 7. Restart any loaded kiosk LaunchAgent so the kiosk picks up the
@@ -165,11 +213,11 @@ for label in "${KIOSK_LABELS[@]}"; do
 done
 
 if [[ "$RELOADED" -gt 0 ]]; then
-  green "✓ Kiosk restarted with the new media. (Brief black screen during restart.)"
+  green "✓ Kiosk restarted with the new content. (Brief black screen during restart.)"
 else
-  yellow "→ No kiosk LaunchAgent is currently loaded — media replaced on disk,"
+  yellow "→ No kiosk LaunchAgent is currently loaded — files replaced on disk,"
   echo "  but no running kiosk to refresh."
 fi
 
-# The EXIT trap deletes $TMP — the downloaded zip + everything that
-# was in it except the media we just moved into PROJECT_DIR.
+# The EXIT trap deletes $TMP — the downloaded zip + everything that was
+# in it except the media + config.js files we copied into PROJECT_DIR.

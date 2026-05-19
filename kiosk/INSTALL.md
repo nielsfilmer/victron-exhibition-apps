@@ -377,9 +377,8 @@ is executable: `ls -l kiosk/bin/kiosk-ws-relay-*`.
 ## 4. Updating content during a show
 
 ### 4.1 Bulk update from a content-team zip (Easy mode)
-When the content team ships a refreshed media package (new slide
-images / videos / chapter video) as a single `.zip`, refresh the
-kiosk in one step:
+When the content team ships a refreshed media + config package as a
+single `.zip`, refresh the kiosk in one step:
 
 **One-time setup (per show):** open `kiosk/content-url.txt` in any
 text editor, paste the zip URL the content team sent on a line below
@@ -387,11 +386,17 @@ the comments, save.
 
 **Then, every time there's a new package** — in Finder, open the
 project folder and **double-click `Update media.command`**. A
-Terminal window opens, downloads the zip, replaces the media folders
-in `app1-slideshow/media/`, `app2-chapters/media/`, and
-`app3-multi-screen/media/` with the new content, deletes the
-downloaded zip + everything else from the archive, and restarts the
-running kiosk so the new media is on screen.
+Terminal window opens, downloads the zip, replaces:
+
+- the `media/` folder for any app whose `app{N}-…/media/` is in the zip
+- the `config.js` for any app whose `app{N}-…/config.js` is in the zip
+
+…deletes the downloaded zip + everything else from the archive, and
+restarts the running kiosk so the new content is on screen.
+
+`media/` and `config.js` are independent — the zip may include
+either, both, or neither for any given app. Anything missing from
+the zip is left untouched on disk.
 
 **Terminal mode** (equivalent):
 
@@ -399,21 +404,25 @@ running kiosk so the new media is on screen.
 ./kiosk/content-update.sh
 ```
 
-What the script does NOT touch: `config.js` files, HTML, JS, CSS,
-fonts, launch scripts. Only the media files. If the new package's
-filenames differ from what `config.js` references, you'll still need
-to update `config.js` manually (see §4.2 below) — agree filenames
-with the content team in advance so config.js can stay untouched.
+What the script does NOT touch: HTML, CSS, fonts, the launch
+scripts, the LaunchAgent plists, the App 3 ws-relay binary, and
+`kiosk/app3-displays.env` (operator-edited per-Mac hardware
+geometry). Everything else under each app folder is fair game for
+the content team to update via the zip.
 
 **Recovering from a bad content update:** if the new zip is wrong,
-restore the original committed media with:
+restore the original committed media + config with:
 
 ```bash
-git checkout -- app1-slideshow/media app2-chapters/media app3-multi-screen/media
+git checkout -- app1-slideshow/{media,config.js} \
+                app2-chapters/{media,config.js} \
+                app3-multi-screen/{media,config.js}
 ```
 
 Then re-run `./kiosk/update.sh` (or double-click `Update.command`)
-to reload the kiosk.
+to reload the kiosk. The kiosk will show the on-screen error overlay
+("config.js did not set window.APP_CONFIG…") if the content team
+shipped a malformed `config.js` — that's the signal to roll back.
 
 ### 4.2 Manual edits — App 1 (slideshow)
 - Slide content (image / video, title, subtitle, body, variant,

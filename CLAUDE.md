@@ -163,19 +163,32 @@ plus scripts that boot a Mac into any of them in Chrome kiosk mode.
   old Chrome running and the operator wouldn't see the update —
   `kickstart -k` is bullet-proof).
 - `kiosk/content-update.sh` + `kiosk/content-url.txt` — separate
-  flow for the content team's bulk-media drops. Reads the URL from
+  flow for the content team's bulk drops. Reads the URL from
   `content-url.txt` (one URL per file, comment lines `#` ignored),
-  downloads + unzips, locates `app{1,2}-{slideshow,chapters}/media/`
-  inside the extracted tree (accepts both flat and one-level-deep
-  nested layouts), REPLACES the local `media/` folders only (config
-  / HTML / JS / fonts are never touched), deletes the temp
-  extraction, then `kickstart -k`-restarts any loaded LaunchAgent.
+  downloads + unzips, then for each of the three apps it locates
+  `app{N}-…/media/` and/or `app{N}-…/config.js` inside the
+  extracted tree (accepts flat or one-level-deep nested layouts)
+  and REPLACES whichever it finds locally. Each app's media + config
+  is independent — a zip may include either, both, or neither for
+  any given app, and anything missing is left untouched. **HTML,
+  CSS, fonts, launch scripts, plists, the ws-relay binary, and
+  `kiosk/app3-displays.env` are NEVER touched** by content-update —
+  those belong to dev / ops, not the content team. After replacing,
+  deletes the temp extraction and `kickstart -k`-restarts any
+  loaded LaunchAgent.
   The URL parsing is a pure-bash read loop (NOT `grep | head`) on
   purpose — `set -o pipefail` would kill the script when grep
   finds no matches (i.e. the file ships with only comments), and
   we want to fall through to the friendly "no URL set" error.
-  Recovery from a bad content drop: `git checkout -- app1-slideshow/media app2-chapters/media app3-multi-screen/media`
-  restores the committed defaults.
+  `find_in_zip` uses `test "$flag" "$path"` instead of
+  `[[ $flag $path ]]` because bash parses `[[ ]]` operators at
+  parse time, not eval time — the operator flag has to come from
+  a variable so `test` is the only option.
+  Recovery from a bad content drop:
+  `git checkout -- app1-slideshow/{media,config.js} app2-chapters/{media,config.js} app3-multi-screen/{media,config.js}`
+  restores the committed defaults. The kiosk's on-screen error
+  overlay ("config.js did not set window.APP_CONFIG…") is the
+  signal to roll back when a malformed config gets shipped.
 - **Project root `*.command` files** — `Install App 1.command`,
   `Install App 2.command`, `Install App 3.command`, `Update.command`,
   `Update media.command`.
@@ -686,7 +699,7 @@ intersolar-tv-apps/                  # local folder; repo is victron-exhibition-
     ├── INSTALL.md                  # full setup + show-floor ops manual (incl. §3.7 App 3)
     ├── install.sh                  # templates plist paths + launchctl loads (app1/app2/app3)
     ├── update.sh                   # git pull + launchctl kickstart -k the kiosk
-    ├── content-update.sh           # download content zip + replace media folders
+    ├── content-update.sh           # download content zip + replace media/ + config.js per app
     ├── content-url.txt             # plain-text URL the content-update script reads
     ├── launch-app1.sh              # exec'd by LaunchAgent; opens Chrome --kiosk
     ├── launch-app2.sh
