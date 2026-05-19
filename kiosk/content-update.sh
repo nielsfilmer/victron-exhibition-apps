@@ -137,7 +137,11 @@ REPLACED_MEDIA=0
 REPLACED_CONFIG=0
 TOUCHED_APPS=()
 for app in "${APPS[@]}"; do
-  app_touched=0
+  # `declare` makes the per-iteration scope explicit. (`local` is
+  # function-scope only — this loop is at script top level, so
+  # `app_touched` is technically a global. The reset at the top of
+  # each iteration prevents cross-app contamination.)
+  declare app_touched=0
 
   if SRC="$(find_in_zip "$app" "media" -d)"; then
     DEST="$PROJECT_DIR/$app/media"
@@ -175,6 +179,13 @@ fi
 green "✓ Replaced $REPLACED_MEDIA media folder(s) + $REPLACED_CONFIG config file(s)."
 # Tell the operator which apps were actually touched — most relevant
 # for them to know which kiosk to keep an eye on after the restart.
+# TOUCHED_APPS is guaranteed non-empty here: the (REPLACED_MEDIA +
+# REPLACED_CONFIG == 0) early-exit above means at least one app
+# contributed to the counts, and the only way to contribute is via
+# the `app_touched=1` branches in the per-app loop above (which
+# always append the app to TOUCHED_APPS). Important for macOS bash
+# 3.2 + `set -u`, where expanding an empty array crashes — if you
+# move this block, re-check the precondition.
 if [[ "${#TOUCHED_APPS[@]}" -gt 0 ]]; then
   yellow "  Apps updated: ${TOUCHED_APPS[*]}"
 fi

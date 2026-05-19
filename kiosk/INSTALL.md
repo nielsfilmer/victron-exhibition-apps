@@ -404,11 +404,12 @@ the zip is left untouched on disk.
 ./kiosk/content-update.sh
 ```
 
-What the script does NOT touch: HTML, CSS, fonts, the launch
-scripts, the LaunchAgent plists, the App 3 ws-relay binary, and
-`kiosk/app3-displays.env` (operator-edited per-Mac hardware
-geometry). Everything else under each app folder is fair game for
-the content team to update via the zip.
+The script ONLY touches each app's `media/` folder and `config.js` —
+nothing else, even if the zip contains other files under an app
+folder. HTML, CSS, fonts, launch scripts, LaunchAgent plists, the
+App 3 ws-relay binary, and `kiosk/app3-displays.env` (operator-edited
+per-Mac hardware geometry) are never touched. Everything else in the
+zip is ignored and cleaned up.
 
 **Recovering from a bad content update:** if the new zip is wrong,
 restore the original committed media + config with:
@@ -420,9 +421,11 @@ git checkout -- app1-slideshow/{media,config.js} \
 ```
 
 Then re-run `./kiosk/update.sh` (or double-click `Update.command`)
-to reload the kiosk. The kiosk will show the on-screen error overlay
-("config.js did not set window.APP_CONFIG…") if the content team
-shipped a malformed `config.js` — that's the signal to roll back.
+to reload the kiosk. The kiosk will show its on-screen error overlay
+(a full-viewport blue screen — e.g. "config.js did not set
+window.APP_CONFIG…", "slideshow.images is empty", or App 3's
+"missing or empty wsUrl") if the content team shipped a malformed or
+mis-filed `config.js` — any of these is the signal to roll back.
 
 ### 4.2 Manual edits — App 1 (slideshow)
 - Slide content (image / video, title, subtitle, body, variant,
