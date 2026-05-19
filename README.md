@@ -52,6 +52,8 @@ intersolar-tv-apps/
     ├── update.sh            # pull latest code from GitHub + reload the kiosk
     ├── content-update.sh    # download content zip from content-team URL → replace each app's media/ + config.js, reload
     ├── content-url.txt      # one-line URL the content team gives you
+    ├── build-docx.sh        # dev tool: regenerate the .docx user manual from INSTALL.md
+    ├── build-docx/          # Node project (marked + docx) that does the conversion
     └── INSTALL.md           # full kiosk-Mac + touchscreen setup + show-floor ops
 ```
 

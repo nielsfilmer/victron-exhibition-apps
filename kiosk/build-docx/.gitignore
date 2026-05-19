@@ -1,0 +1,4 @@
+# Locally-installed deps — committed package.json + package-lock.json
+# pin exact versions, so re-running ./kiosk/build-docx.sh on a fresh
+# clone produces the same .docx output.
+node_modules/
