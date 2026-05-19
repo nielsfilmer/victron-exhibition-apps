@@ -561,14 +561,16 @@ The Victron design system file (referenced earlier in the build) is
    the need for per-element overrides. Don't replace it with a
    body-only rule. Toggle off for testing via the `debug` config
    flag — see App 1 / App 2 architecture sections.
-13. **Countdown ring must live INSIDE the `<button>` element**, not as
-   a sibling. When it was a sibling: (a) the button's background
+13. **App 1: Countdown ring must live INSIDE the `<button>` element**,
+   not as a sibling. When it was a sibling: (a) the button's background
    painted on top of it (DOM-order = paint-order), so the ring
    "slipped behind" on `:active` press; (b) the ring didn't inherit
    the button's `transform: scale(.95)` press animation. Both fixed
-   by nesting. Don't move the SVG back outside the button.
-14. **Countdown ring uses `inset: -1px` to cover the button's 1 px
-   border.** `.ctrl-btn` is `width: 96px` with `box-sizing:
+   by nesting. Don't move the SVG back outside the button. (App 3
+   used to have the same construction; it's gone now alongside the
+   rest of App 3's controls — see App 3 architecture.)
+14. **App 1: Countdown ring uses `inset: -1px` to cover the button's
+   1 px border.** `.ctrl-btn` is `width: 96px` with `box-sizing:
    border-box` and a `1 px solid` border, so the content (padding)
    box is 94×94. Without `inset: -1px` the ring SVG renders 94×94
    and a 1 px blue rim shows outside the white stroke. Don't drop
@@ -603,8 +605,9 @@ The Victron design system file (referenced earlier in the build) is
    `build.sh` + committing the resulting binaries, the App 3 install
    succeeds but the relay never starts and the satellites never sync.
 18. **App 3: config field is `middle`, role is `center`.** The
-   geographic field name (`middle`) and the UI-meaningful role name
-   (`center` — the one with the controls) don't match. There's a
+   geographic field name (`middle`) and the role name (`center` —
+   legacy from when this role had the App 1 controls cluster, since
+   removed) don't match. There's a
    `ROLE_TO_FIELD = { center: 'middle', left: 'left', right: 'right' }`
    map in `app3-multi-screen/index.html` that bridges them once at
    boot. If you rename either side, rename both — and update the
