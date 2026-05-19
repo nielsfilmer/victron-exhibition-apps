@@ -656,13 +656,14 @@ curl -sf http://127.0.0.1:8743/health  # expect "ok"
 # different ?role= params to verify the sync visually.
 kill %1
 
-# Regenerate the .docx user manual from kiosk/INSTALL.md. The build
-# script isn't currently committed — it lives at /tmp/build-installdoc.js
-# during the session that writes it. If it's worth re-running often,
-# move it into kiosk/build-docx.sh and chmod +x. The generated file
-# lands at ~/Downloads/Victron Exhibition Kiosk Apps — User Manual …docx
-# for upload to Google Drive.
-NODE_PATH="$(npm root -g)" node /tmp/build-installdoc.js
+# Regenerate the .docx user manual from kiosk/INSTALL.md. First run
+# `npm install`s `docx` + `marked` into kiosk/build-docx/node_modules/
+# (gitignored, locked by the committed package-lock.json); subsequent
+# runs are fast. The generated file lands at
+# ~/Downloads/Victron Exhibition Kiosk Apps — User Manual <YYYY-MM-DD>.docx
+# for upload to Google Drive — drag-and-drop replace into the existing
+# "Victron Exhibition Kiosk Apps — User Manual" doc.
+./kiosk/build-docx.sh
 ```
 
 ## File map (quick orientation)
@@ -719,7 +720,12 @@ intersolar-tv-apps/                  # local folder; repo is victron-exhibition-
     │   ├── go.mod / go.sum
     │   ├── build.sh                # builds both arch binaries into ../bin/
     │   └── README.md
-    └── bin/                        # prebuilt relay binaries (committed)
-        ├── kiosk-ws-relay-arm64
-        └── kiosk-ws-relay-x86_64
+    ├── bin/                        # prebuilt relay binaries (committed)
+    │   ├── kiosk-ws-relay-arm64
+    │   └── kiosk-ws-relay-x86_64
+    ├── build-docx.sh               # wrapper for build-docx/build.js (dev tool, not a kiosk runtime)
+    └── build-docx/                 # MD→DOCX user-manual generator (Node.js + marked + docx)
+        ├── build.js                # reads kiosk/INSTALL.md → writes ~/Downloads/…User Manual <date>.docx
+        ├── package.json + package-lock.json
+        └── .gitignore              # excludes node_modules/ (installed on first run)
 ```
