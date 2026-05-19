@@ -1,5 +1,5 @@
 {
-  "name": "build-installdoc",
+  "name": "build-docx",
   "version": "1.0.0",
   "private": true,
   "description": "Convert kiosk/INSTALL.md into a styled .docx user manual for upload to Google Drive.",

@@ -22,11 +22,9 @@ const {
   Table,
   TableRow,
   TableCell,
-  Header,
   Footer,
   Tab,
   TabStopType,
-  TabStopPosition,
   PageNumber,
   PageBreak,
   AlignmentType,
@@ -228,12 +226,19 @@ function paragraphFromInline(tokens, opts = {}) {
 }
 
 function headingParagraph(depth, tokens) {
+  // Shift source headings one level shallower in the docx: the source's
+  // single H1 ("Kiosk install & operations guide") is promoted to the
+  // cover page and dropped from the body, so without this shift the
+  // body's top-level outline would start at Heading 2 and the
+  // generated TOC would have no top-level entries. Source H2 → Word
+  // Heading 1, H3 → Heading 2, etc. — gives the doc a real outline.
+  const shifted = Math.max(1, depth - 1);
   const heading =
-    depth === 1
+    shifted === 1
       ? HeadingLevel.HEADING_1
-      : depth === 2
+      : shifted === 2
         ? HeadingLevel.HEADING_2
-        : depth === 3
+        : shifted === 3
           ? HeadingLevel.HEADING_3
           : HeadingLevel.HEADING_4;
   return new Paragraph({
@@ -242,11 +247,13 @@ function headingParagraph(depth, tokens) {
   });
 }
 
-function codeBlockParagraphs(text, lang) {
+function codeBlockParagraphs(text) {
   // Multi-line code blocks become one Paragraph per source line so
   // line breaks render correctly + each line gets its own grey shading
   // run (Word renders shading across the full content area for a
   // shaded paragraph — easier than spanning a single multi-line run).
+  // The marked `lang` (bash, js, etc.) is currently ignored — all code
+  // blocks render with the same monospace + grey-shade treatment.
   const lines = text.replace(/\n+$/, "").split("\n");
   return lines.map(
     (line, i) =>
@@ -266,26 +273,6 @@ function codeBlockParagraphs(text, lang) {
         indent: { left: 360 },
       })
   );
-}
-
-function blockquoteParagraphs(tokens) {
-  // Recurse into the blockquote's body to handle nested paragraphs +
-  // lists, then style every resulting paragraph with the warning
-  // callout look (pale yellow shading, amber left border, indented).
-  const body = blockTokensToElements(tokens);
-  return body.map((el) => {
-    if (el instanceof Paragraph) {
-      // docx-js Paragraphs are constructed once — to mutate we'd need
-      // to rebuild. We can't easily access internals, so we re-wrap
-      // by rebuilding from the original tokens. For simplicity, accept
-      // a small visual fidelity loss: blockquotes get only the
-      // shading + indent applied by re-creating with new opts. Since
-      // we recursed via blockTokensToElements, the original token
-      // walker already yielded Paragraphs without the callout look.
-      // Fall through: re-emit each token bucket as a styled paragraph.
-    }
-    return el;
-  });
 }
 
 // Rebuild blockquote children with callout styling baked in. The
@@ -321,7 +308,7 @@ function blockquoteToParagraphs(quoteTokens) {
     } else if (t.type === "blockquote") {
       out.push(...blockquoteToParagraphs(t.tokens));
     } else if (t.type === "code") {
-      out.push(...codeBlockParagraphs(t.text, t.lang));
+      out.push(...codeBlockParagraphs(t.text));
     } else if (t.type === "space") {
       // skip
     } else {
@@ -407,7 +394,7 @@ function listItemParagraphs(item, ordered, level, quote = false) {
         out.push(...listItemParagraphs(sub, !!child.ordered, level + 1, quote));
       }
     } else if (child.type === "code") {
-      out.push(...codeBlockParagraphs(child.text, child.lang));
+      out.push(...codeBlockParagraphs(child.text));
     } else if (child.type === "blockquote") {
       out.push(...blockquoteToParagraphs(child.tokens));
     } else if (child.type === "space") {
@@ -502,7 +489,7 @@ function blockTokensToElements(tokens) {
         out.push(paragraphFromInline(t.tokens));
         break;
       case "code":
-        out.push(...codeBlockParagraphs(t.text, t.lang));
+        out.push(...codeBlockParagraphs(t.text));
         break;
       case "blockquote":
         out.push(...blockquoteToParagraphs(t.tokens));
@@ -649,7 +636,7 @@ const tocChildren = [
 
 // Body — skip the source's first H1 (we used it on the cover).
 const bodyTokens = firstHeading
-  ? tokens.filter((t, i) => !(t === firstHeading))
+  ? tokens.filter((t) => t !== firstHeading)
   : tokens;
 const bodyChildren = blockTokensToElements(bodyTokens);
 
@@ -746,11 +733,19 @@ const doc = new Document({
 
 // ----- Write out ---------------------------------------------------
 
-Packer.toBuffer(doc).then((buffer) => {
-  fs.writeFileSync(OUTPUT, buffer);
-  const kb = (buffer.length / 1024).toFixed(1);
-  console.log(`✓ Wrote ${OUTPUT} (${kb} KB)`);
-  console.log(`  → Upload to Google Drive: drag-and-drop into the existing`);
-  console.log(`    "Victron Exhibition Kiosk Apps — User Manual" doc, or`);
-  console.log(`    create a new Doc by opening this file in Google Drive.`);
-});
+Packer.toBuffer(doc)
+  .then((buffer) => {
+    fs.writeFileSync(OUTPUT, buffer);
+    const kb = (buffer.length / 1024).toFixed(1);
+    console.log(`✓ Wrote ${OUTPUT} (${kb} KB)`);
+    console.log(`  → Upload to Google Drive: drag-and-drop into the existing`);
+    console.log(`    "Victron Exhibition Kiosk Apps — User Manual" doc, or`);
+    console.log(`    create a new Doc by opening this file in Google Drive.`);
+  })
+  .catch((err) => {
+    // Without an explicit catch, packing / writeFile errors surface as
+    // a noisy UnhandledPromiseRejection stack trace. Convert to the
+    // same friendly ✖ format as the other failure paths in this file.
+    console.error(`✖ Failed to write ${OUTPUT}: ${err && err.message ? err.message : err}`);
+    process.exit(1);
+  });
