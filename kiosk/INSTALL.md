@@ -10,6 +10,13 @@ non-developer Victron staffer to follow at the show.
 > variants, animation timings) see the project root [`README.md`](../README.md).
 > This file is install / hardware / show-floor operations only.
 
+## Change control
+
+| Author | Summary of changes | Version | Last Updated |
+|---|---|---|---|
+| Niels Filmer | Initial document — manual for the rewritten kiosk apps (Victron Exhibition Apps). | V1.0 | 14-5-2026 |
+| Niels Filmer | Added App 3 (3-screen synced kiosk slideshow + WebSocket sync relay); content-update.sh now also replaces each app's config.js when present in the zip. | V1.1 | 19-5-2026 |
+
 ---
 
 ## 1. Hardware
