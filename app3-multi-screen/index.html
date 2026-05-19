@@ -5,35 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Victron Multi-Screen Kiosk</title>
 <style>
-  /* Self-hosted Museo Sans 700 — kiosk runs fully offline, no network calls */
-  @font-face {
-    font-family: "museo-sans";
-    src: url("fonts/museosans-700.ttf") format("truetype");
-    font-weight: 700;
-    font-style: normal;
-    font-display: block;
-  }
-
   /* ===========================================================
-     Design tokens — mirror App 1's tokens for visual consistency.
-     vw-based so the layout scales linearly from 1080p to 4K.
+     Design tokens — minimal set. No headings / pagination / controls
+     in App 3, so no Museo Sans, no button colours, no padding tokens.
      =========================================================== */
   :root {
-    --black:            #000000;
-    --primary-600:      #005fbe;
-    --white:            #ffffff;
-    --white-80:         rgba(255, 255, 255, 0.8);
-    --btn-border:       rgba(0, 0, 0, 0.16);
+    --black:           #000000;
+    --primary-600:     #005fbe;  /* used by the error overlay only */
+    --white:           #ffffff;
 
-    --font-headers:     "museo-sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-body:        "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-
-    --pad-edge:         2.5vw;
-    --btn-size:         5vw;
-    --gap-controls:     1.667vw;
-
-    --transition-ms:    700ms;
-    --ease:             cubic-bezier(0.22, 0.61, 0.36, 1);
+    --transition-ms:   700ms;
+    --ease:            cubic-bezier(0.22, 0.61, 0.36, 1);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,7 +25,7 @@
     overflow: hidden;
     background: var(--black);
     color: var(--white);
-    font-family: var(--font-body);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
     touch-action: none;
   }
 
@@ -76,8 +58,8 @@
   }
 
   /* ===========================================================
-     Slides — each slide is a full-stage container holding a single
-     media element (image OR video). Only one slide carries
+     Slides — one full-stage container per slide, each holding a
+     single media element (image OR video). Only one slide carries
      `.is-current` at a time; entry animation is opacity + slight
      scale, matching App 1 so the visual feel is consistent across
      all three apps.
@@ -110,75 +92,6 @@
   .slide.is-current .slide-media { opacity: 1; transform: scale(1); }
 
   /* ===========================================================
-     Controls cluster — center role only. Hidden on left/right via
-     a body.role-* class set at boot from the ?role= URL param.
-     Layout / colours / sizing copied verbatim from App 1 so the
-     control surface is identical across the two apps that have it.
-     =========================================================== */
-  body:not(.role-center) #controls { display: none; }
-
-  #controls {
-    position: absolute;
-    left: var(--pad-edge);
-    right: auto;
-    bottom: var(--pad-edge);
-    display: flex;
-    align-items: center;
-    gap: var(--gap-controls);
-    z-index: 3;
-  }
-  body.controls-right #controls {
-    left: auto;
-    right: var(--pad-edge);
-  }
-
-  .ctrl-btn {
-    position: relative;
-    width: var(--btn-size);
-    height: var(--btn-size);
-    border-radius: 100px;
-    background: var(--primary-600);
-    border: 1px solid var(--btn-border);
-    color: var(--white);
-    display: flex; align-items: center; justify-content: center;
-    padding: 0;
-    transition: transform 120ms var(--ease), filter 200ms var(--ease);
-  }
-  .ctrl-btn:active { transform: scale(0.95); filter: brightness(0.9); }
-  .ctrl-btn > svg:not(#countdown-ring) { width: 41.67%; height: 41.67%; display: block; }
-
-  #pagination {
-    font-family: var(--font-body);
-    font-weight: 500;
-    font-size: 1.458vw;
-    line-height: 1.2;
-    color: var(--white);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
-  #next-wrap { flex-shrink: 0; }
-
-  /* Countdown ring lives inside the next button (same as App 1) so it
-     inherits the `:active` scale and paints over the blue fill.
-     `inset: -1px` covers the button's 1px border — without it, a 1px
-     blue rim would show outside the white ring stroke. RING_R in JS
-     MUST match <circle r=…> here, or the dasharray won't fully cover
-     the path at fraction 0 and a small arc would be visible. */
-  #countdown-ring {
-    position: absolute;
-    inset: -1px;
-    pointer-events: none;
-    transform: rotate(-90deg);
-  }
-  #countdown-ring .progress {
-    fill: none;
-    stroke: var(--white);
-    stroke-width: 5;
-    stroke-linecap: round;
-  }
-
-  /* ===========================================================
      Debug HUD — top-left, only visible when `debug: true`. Shows
      the role, WebSocket state, and the most-recent applied state
      so a developer can see the sync at a glance. Matches App 2's
@@ -206,7 +119,6 @@
     align-items: center; justify-content: center;
     background: var(--primary-600);
     padding: 5vw;
-    font-family: var(--font-body);
     font-size: 1.6vw;
     text-align: center; line-height: 1.6;
     color: var(--white);
@@ -218,42 +130,6 @@
 <body>
   <div id="stage">
     <div id="slides"></div>
-
-    <!-- Controls cluster — visible only on the center role -->
-    <div id="controls">
-      <button class="ctrl-btn" id="back-btn" aria-label="Previous slide">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="20" y1="12" x2="4" y2="12"/>
-          <polyline points="11 19 4 12 11 5"/>
-        </svg>
-      </button>
-
-      <div id="pagination" aria-live="polite">
-        <span class="current">1</span> / <span class="total">1</span>
-      </div>
-
-      <div id="next-wrap">
-        <button class="ctrl-btn" id="next-btn" aria-label="Next slide">
-          <svg id="countdown-ring" viewBox="0 0 100 100" aria-hidden="true">
-            <circle class="progress" cx="50" cy="50" r="47.5"/>
-          </svg>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="4" y1="12" x2="20" y2="12"/>
-            <polyline points="13 5 20 12 13 19"/>
-          </svg>
-        </button>
-      </div>
-
-      <button class="ctrl-btn" id="pause-btn" aria-label="Pause auto-advance" aria-pressed="false">
-        <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <rect x="6"  y="4" width="4" height="16" rx="1"/>
-          <rect x="14" y="4" width="4" height="16" rx="1"/>
-        </svg>
-        <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none">
-          <polygon points="6,4 20,12 6,20"/>
-        </svg>
-      </button>
-    </div>
   </div>
 
   <div id="hud"></div>
@@ -263,18 +139,9 @@
 <script>
 (function () {
   const $ = (s) => document.querySelector(s);
-  const stage      = $('#stage');
-  const slidesEl   = $('#slides');
-  const backBtn    = $('#back-btn');
-  const nextBtn    = $('#next-btn');
-  const pauseBtn   = $('#pause-btn');
-  const ringProg   = $('#countdown-ring .progress');
-  const pageCur    = $('#pagination .current');
-  const pageTot    = $('#pagination .total');
-  const errorEl    = $('#error');
-  const hud        = $('#hud');
-  const iconPause  = pauseBtn.querySelector('.icon-pause');
-  const iconPlay   = pauseBtn.querySelector('.icon-play');
+  const slidesEl = $('#slides');
+  const errorEl  = $('#error');
+  const hud      = $('#hud');
 
   const showError = (msg) => {
     errorEl.textContent = msg;
@@ -286,8 +153,12 @@
   if (!cfg) return showError('config.js did not set window.APP_CONFIG — check the file.');
 
   // ---- Role detection -----------------------------------------------------
-  // ?role=center|left|right; default to center if missing. Center is the
-  // only role with controls + swipe; satellites are passive receivers.
+  // ?role=center|left|right; default to center if missing. There are no
+  // controls anymore — every role just renders its own slide source. The
+  // `center` role is still distinguished because it (and only it) owns
+  // the auto-advance timer and broadcasts state to the satellites via
+  // the WS relay; without one authoritative ticker the three displays
+  // would drift over time (different startup times + render jitter).
   const VALID_ROLES = new Set(['center', 'left', 'right']);
   const urlRole = new URLSearchParams(location.search).get('role');
   const role = VALID_ROLES.has(urlRole) ? urlRole : 'center';
@@ -300,14 +171,13 @@
 
   const ss = cfg.slideshow || {};
   // typeof===number so an explicit 0 is honoured (same trick as App 1):
-  //   autoAdvanceMs: 0 → countdown disabled, slide stays until manual nav.
+  //   autoAdvanceMs: 0 → slide stays forever (never advances). With no
+  //   controls in App 3, a slide configured this way will freeze the
+  //   slideshow — useful only if all-but-one slides are 0 and the
+  //   kiosk should hold on a single hero image / video. The default
+  //   8000 keeps the show running.
   const transitionMs  = (typeof ss.transitionMs  === 'number') ? ss.transitionMs  : 700;
   const autoAdvanceMs = (typeof ss.autoAdvanceMs === 'number') ? ss.autoAdvanceMs : 8000;
-  const pauseMinutes  = cfg.pauseMinutes != null ? cfg.pauseMinutes : 5;
-  const pauseMs       = Math.max(0, pauseMinutes) * 60 * 1000;
-
-  const controlsAlign = cfg.controlsAlign === 'right' ? 'right' : 'left';
-  if (controlsAlign === 'right') document.body.classList.add('controls-right');
 
   if (cfg.debug === true) document.body.classList.add('debug');
 
@@ -327,8 +197,8 @@
   // etc.). Saves DOM weight + per-video preload pressure on satellites.
   const VIDEO_EXT = /\.(mp4|webm|ogg|m4v|mov)(\?.*)?$/i;
   // The config field is `middle` (geographically) but the role is
-  // `center` (UI-meaningful — it's the one with the controls). Map
-  // role → config-field once so the rest of the code can ignore the
+  // `center` (legacy from when the center had controls). Map role →
+  // config-field once so the rest of the code can ignore the
   // distinction.
   const ROLE_TO_FIELD = { center: 'middle', left: 'left', right: 'right' };
   const fieldName = ROLE_TO_FIELD[role];
@@ -383,53 +253,22 @@
     mediaEls.push(mediaEl);
   });
 
-  pageTot.textContent = String(slides.length);
-
-  // ---- Countdown ring (center only, but harmless on satellites) ----------
-  // RING_R MUST match the SVG <circle r="…">. Mismatch → dasharray
-  // doesn't cover path at f=0 and a small arc is visible. Same pitfall
-  // as App 1 — see CLAUDE.md "Common pitfalls" #1.
-  const RING_R = 47.5;
-  const RING_C = 2 * Math.PI * RING_R;
-  ringProg.style.strokeDasharray  = RING_C;
-  ringProg.style.strokeDashoffset = RING_C;
-
-  let countdownStart = 0;
-  let countdownRAF   = null;
-  let pauseResumeTimer = null;
-  let isPaused = false;
-  let currentMs = 0;
-
-  const setRingProgress = (fraction) => {
-    const f = Math.min(1, Math.max(0, fraction));
-    ringProg.style.strokeDashoffset = String(RING_C * (1 - f));
-  };
-  const stopCountdown = () => {
-    if (countdownRAF) { cancelAnimationFrame(countdownRAF); countdownRAF = null; }
-  };
+  // ---- Auto-advance (center only) ----------------------------------------
+  // The countdown ring + per-frame requestAnimationFrame from App 1 is
+  // gone — no UI to draw against, so a plain setTimeout to the next
+  // boundary is enough. Re-armed every time the slide changes (whether
+  // local-advance or incoming broadcast).
+  let advanceTimer = null;
   const effectiveAutoAdvanceMs = (i) => {
     const s = slides[i];
     return (s && typeof s.autoAdvanceMs === 'number') ? s.autoAdvanceMs : autoAdvanceMs;
   };
-  const startCountdown = () => {
+  const scheduleNextAdvance = () => {
+    if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
     if (!isCenter) return;            // only center auto-advances
-    stopCountdown();
-    currentMs = effectiveAutoAdvanceMs(current);
-    if (currentMs <= 0 || isPaused) return;
-    countdownStart = performance.now();
-    setRingProgress(0);
-    const tick = (now) => {
-      const elapsed = now - countdownStart;
-      const f = elapsed / currentMs;
-      setRingProgress(f);
-      if (f < 1) {
-        countdownRAF = requestAnimationFrame(tick);
-      } else {
-        countdownRAF = null;
-        nextSlide();
-      }
-    };
-    countdownRAF = requestAnimationFrame(tick);
+    const ms = effectiveAutoAdvanceMs(current);
+    if (ms <= 0) return;              // 0 = stay forever
+    advanceTimer = setTimeout(() => nextSlide(), ms);
   };
 
   // ---- Slide rendering ---------------------------------------------------
@@ -442,46 +281,27 @@
       if (v && v.tagName === 'VIDEO') {
         if (isNew) {
           try { v.currentTime = 0; } catch (_) {}
-          // Don't autoplay videos while paused — they should freeze with
-          // the rest of the slideshow.
-          if (!isPaused) {
-            const p = v.play();
-            if (p && p.catch) p.catch(() => {});
-          }
+          const p = v.play();
+          if (p && p.catch) p.catch(() => {});
         } else {
           try { v.pause(); } catch (_) {}
         }
       }
     });
-    pageCur.textContent = String(next + 1);
     updateHud();
   };
 
   // ---- State + sync ------------------------------------------------------
-  // Center is authoritative: it owns `current` + `isPaused` and
-  // broadcasts on every change. Satellites apply incoming state and
-  // never originate state changes (their input listeners are no-ops).
-  // `lastAppliedTs` guards against any out-of-order delivery — TCP
-  // preserves order so this is paranoia but cheap.
+  // Center is authoritative: it owns `current` and broadcasts on every
+  // change. Satellites apply incoming state and never originate state
+  // changes. `lastAppliedTs` guards against any out-of-order delivery —
+  // TCP preserves order so this is paranoia but cheap.
   let lastAppliedTs = 0;
 
   const applyState = (st) => {
     if (typeof st.ts === 'number' && st.ts <= lastAppliedTs) return;
     if (typeof st.ts === 'number') lastAppliedTs = st.ts;
 
-    // Apply `paused` BEFORE `index` so renderSlide()'s `if (!isPaused)`
-    // video-play branch sees the right pause state on the first apply
-    // after boot. Without this ordering, a satellite that connects
-    // while the operator has the center paused would briefly play the
-    // entering slide's video (one frame) before applyState's second
-    // half pauses it — a visible flicker. setPaused() with broadcast=false
-    // is cheap when the state already matches (idempotent UI update).
-    if (typeof st.paused === 'boolean' && st.paused !== isPaused) {
-      // applyState comes from the wire on satellites; on center, the
-      // user toggled the button locally (and broadcastState was already
-      // called). Either way, mirror the UI + video state.
-      setPaused(st.paused, /*broadcast=*/false);
-    }
     if (typeof st.index === 'number') {
       const n = ((st.index % slides.length) + slides.length) % slides.length;
       if (n !== current) {
@@ -493,12 +313,14 @@
 
   const broadcastState = () => {
     if (!isCenter) return;
-    send({ type: 'state', index: current, paused: isPaused, ts: Date.now() });
+    send({ type: 'state', index: current, ts: Date.now() });
   };
 
-  // Navigation. On center, these update local state and broadcast.
-  // On satellites the button event listeners are not bound, so these
-  // are only ever called as a side-effect of an incoming broadcast.
+  // Advance one slide on the center; rebroadcast + re-arm the timer.
+  // On satellites this is only reachable via the broadcast handler
+  // (which sets `current` and calls renderSlide directly), so the
+  // `if (isCenter)` guards inside aren't really needed there — kept
+  // for symmetry / future safety.
   const goTo = (i) => {
     const n = ((i % slides.length) + slides.length) % slides.length;
     if (n === current) return;
@@ -506,47 +328,10 @@
     renderSlide(current);
     if (isCenter) {
       broadcastState();
-      if (!isPaused) startCountdown();
+      scheduleNextAdvance();
     }
   };
   const nextSlide = () => goTo(current + 1);
-  const prevSlide = () => goTo(current - 1);
-
-  const setPaused = (paused, broadcast) => {
-    isPaused = !!paused;
-    if (isPaused) {
-      stopCountdown();
-      pauseBtn.setAttribute('aria-pressed', 'true');
-      pauseBtn.setAttribute('aria-label', 'Resume auto-advance');
-      iconPause.style.display = 'none';
-      iconPlay.style.display  = 'block';
-      // Pause any playing video on the current slide (every role).
-      const v = mediaEls[current];
-      if (v && v.tagName === 'VIDEO') { try { v.pause(); } catch (_) {} }
-      if (pauseResumeTimer) clearTimeout(pauseResumeTimer);
-      // The auto-resume timer is center-only — satellites mirror state
-      // via the broadcast that follows, so they don't need their own
-      // timer (and shouldn't have one, to keep center authoritative).
-      if (isCenter && pauseMs > 0) {
-        pauseResumeTimer = setTimeout(() => setPaused(false, /*broadcast=*/true), pauseMs);
-      }
-    } else {
-      pauseBtn.setAttribute('aria-pressed', 'false');
-      pauseBtn.setAttribute('aria-label', 'Pause auto-advance');
-      iconPause.style.display = 'block';
-      iconPlay.style.display  = 'none';
-      if (pauseResumeTimer) { clearTimeout(pauseResumeTimer); pauseResumeTimer = null; }
-      // Resume current slide's video (if any).
-      const v = mediaEls[current];
-      if (v && v.tagName === 'VIDEO') {
-        const p = v.play();
-        if (p && p.catch) p.catch(() => {});
-      }
-      if (isCenter) startCountdown();
-    }
-    if (isCenter && broadcast) broadcastState();
-    updateHud();
-  };
 
   // ---- WebSocket client --------------------------------------------------
   // Auto-reconnect with backoff. The relay caches the last broadcast
@@ -569,7 +354,7 @@
         try {
           const m = JSON.parse(sendQueue[i]);
           if (m.type === 'state') sendQueue.splice(i, 1);
-        } catch (_) {}
+        } catch (_) { /* keep malformed entries — shouldn't happen */ }
       }
       sendQueue.push(data);
     }
@@ -617,44 +402,18 @@
     wsRetryMs = Math.min(wsRetryMs * 2, WS_RETRY_MAX);
   };
 
-  // ---- Center-only inputs ------------------------------------------------
-  if (isCenter) {
-    backBtn.addEventListener('pointerdown',  (e) => { e.stopPropagation(); prevSlide(); });
-    nextBtn.addEventListener('pointerdown',  (e) => { e.stopPropagation(); nextSlide(); });
-    pauseBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); setPaused(!isPaused, /*broadcast=*/true); });
-
-    // Swipe — same parameters as App 1.
-    const SWIPE_MAX_MS   = 600;
-    const SWIPE_MIN_DIST = () => Math.max(60, window.innerWidth * 0.04);
-    let swipeStart = null;
-    stage.addEventListener('pointerdown', (e) => {
-      swipeStart = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
-    });
-    const endSwipe = (e) => {
-      if (!swipeStart || (e.pointerId !== undefined && e.pointerId !== swipeStart.id)) return;
-      const dx = e.clientX - swipeStart.x;
-      const dy = e.clientY - swipeStart.y;
-      const dt = performance.now() - swipeStart.t;
-      swipeStart = null;
-      if (dt > SWIPE_MAX_MS) return;
-      const min = SWIPE_MIN_DIST();
-      if (Math.abs(dx) < min || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-      if (dx < 0) nextSlide(); else prevSlide();
-    };
-    stage.addEventListener('pointerup',     endSwipe);
-    stage.addEventListener('pointercancel', () => { swipeStart = null; });
-
-    // Keep countdown accurate after the tab is backgrounded (matches App 1).
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden || isPaused) return;
-      startCountdown();
-    });
-  }
-
   // Block context menu / select / drag globally on every role.
   document.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('selectstart', (e) => e.preventDefault());
   document.addEventListener('dragstart',   (e) => e.preventDefault());
+
+  // If the center's tab is backgrounded (rare in --kiosk, but possible
+  // if an OS-level overlay grabs focus) the setTimeout fires late and
+  // the satellites would drift. Re-arm the next advance from "now" on
+  // visibility regain to keep the timing predictable.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && isCenter) scheduleNextAdvance();
+  });
 
   // ---- Debug HUD ---------------------------------------------------------
   const updateHud = () => {
@@ -662,32 +421,22 @@
     hud.innerHTML =
       '<b>app3 / ' + role + '</b><br>' +
       'slide: ' + (current + 1) + ' / ' + slides.length + '<br>' +
-      'paused: ' + (isPaused ? 'yes' : 'no') + '<br>' +
       'ws: ' + (wsReady ? 'connected' : 'disconnected') + '<br>' +
       'last ts: ' + (lastAppliedTs || '—');
   };
 
   // ---- Boot --------------------------------------------------------------
-  // Wait for fonts (pagination uses the body font; the wait is short)
-  // and then render slide 0. Center starts the countdown + WS broadcast;
-  // satellites just wait for incoming state. Both connect to WS on boot
-  // so the relay's cached-last-message replay can kick in immediately.
-  const finalizeBoot = () => {
-    renderSlide(0);
-    connectWS();
-    if (isCenter) {
-      broadcastState();
-      startCountdown();
-    }
-    updateHud();
-  };
-  let booted = false;
-  const boot = () => { if (booted) return; booted = true; requestAnimationFrame(finalizeBoot); };
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(boot);
+  // Render slide 0 immediately (no fonts to wait for now — text-free app).
+  // Center starts the WS broadcast + auto-advance; satellites just wait
+  // for incoming state. Both connect to WS on boot so the relay's
+  // cached-last-message replay can kick in immediately.
+  renderSlide(0);
+  connectWS();
+  if (isCenter) {
+    broadcastState();
+    scheduleNextAdvance();
   }
-  // Safety net (same value as App 1) in case fonts never resolve.
-  setTimeout(boot, 1500);
+  updateHud();
 }());
 </script>
 </body>

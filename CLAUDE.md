@@ -142,14 +142,16 @@ plus scripts that boot a Mac into any of them in Chrome kiosk mode.
   countdown ring + pause button, line-by-line title animation.
 - `app2-chapters/` — fullscreen video with invisible hotspot buttons that
   jump to per-button timestamps. Debug overlay for hotspot calibration.
-- `app3-multi-screen/` — synced 3-screen slideshow. The same HTML file
-  runs in three Chrome `--kiosk` instances (one per display); a
-  `?role=center|left|right` URL parameter selects which screen's
-  media + controls it renders. The center is authoritative and
-  broadcasts state to the others via a tiny localhost-only Go
-  WebSocket relay (`kiosk/ws-relay/` source, `kiosk/bin/` prebuilt
-  binaries). See "App 3 architecture" below + the carve-out in
-  "Hard project constraints" for the relay rationale.
+- `app3-multi-screen/` — synced 3-screen slideshow, no on-screen
+  controls, auto-advance on a config-driven timer. The same HTML
+  file runs in three Chrome `--kiosk` instances (one per display);
+  a `?role=center|left|right` URL parameter selects which screen's
+  media it renders. The center is the only role that runs the
+  timer + broadcasts; satellites are passive receivers. State is
+  sent via a tiny localhost-only Go WebSocket relay
+  (`kiosk/ws-relay/` source, `kiosk/bin/` prebuilt binaries). See
+  "App 3 architecture" below + the carve-out in "Hard project
+  constraints" for the relay rationale.
 - `kiosk/` — `launch-app{1,2}.sh`, App 3's four launch scripts
   (`launch-app3-{ws,center,left,right}.sh`), `com.intersolar.app{1,2}.plist`,
   the four App 3 plists, and `install.sh`. Templates `__PROJECT_DIR__`
@@ -209,8 +211,9 @@ These came from the user explicitly and shape every decision:
 1. **100% offline.** The kiosk runs from `file://` on a Mac with no
    guaranteed internet. Don't fetch anything from the network at runtime.
    - No CDN fonts (Museo Sans is self-hosted at
-     `app1-slideshow/fonts/museosans-700.ttf` and
-     `app3-multi-screen/fonts/museosans-700.ttf`).
+     `app1-slideshow/fonts/museosans-700.ttf`; App 3 has no text
+     anymore so it doesn't ship the font at all; App 2 likewise
+     uses no custom font).
    - No `fetch('config.json')` — Chrome blocks `fetch` over `file://`.
      Configs are loaded via `<script src="config.js">` which sets
      `window.APP_CONFIG`.
@@ -400,6 +403,11 @@ The Victron design system file (referenced earlier in the build) is
   sync) but `--kiosk` only covers one display at a time on macOS;
   three separate processes are the only way to get all three
   displays into true kiosk lockdown.
+- **No on-screen controls, no visitor interaction.** App 3 was
+  initially built with the App 1 controls cluster overlaid on the
+  center (back / pagination / next + countdown ring / pause). That
+  was later removed at the user's request — the kiosk is now
+  display-only, auto-advancing on a config-driven timer.
 - **WebSocket relay binds 127.0.0.1 only.** The Go relay
   (`kiosk/ws-relay/main.go`) listens on `127.0.0.1:8743/ws`. Each
   Chrome connects, the center broadcasts state, the relay rebroadcasts
@@ -407,12 +415,12 @@ The Victron design system file (referenced earlier in the build) is
   relay caches the last message + replays it to new connects so late-
   joining satellites catch up immediately. **Never bind to `0.0.0.0`**
   (see hard constraint #6).
-- **Center is authoritative.** Only the center responds to user input
-  (buttons + swipe) and runs the auto-advance countdown. Satellites
-  pass `applyState()` over every received message; their button
-  listeners aren't bound. This keeps the slideshow's "source of
-  truth" in one place — splitting authority across windows is
-  needlessly complicated.
+- **Center is authoritative for the timer.** Only the center role
+  runs the auto-advance `setTimeout` and broadcasts. Satellites pass
+  `applyState()` over every received message; they have no timer of
+  their own (per-instance timers would drift over time, even on
+  identical config). The "center" name is a legacy from when this
+  role had controls — visually all three roles render identically.
 - **`?role=center|left|right` URL parameter** selects which screen
   this Chrome instance renders. Same `index.html` for all three; the
   role is set via `body.role-{center,left,right}` class plus a
@@ -422,11 +430,13 @@ The Victron design system file (referenced earlier in the build) is
   exactly ONE media element — the role's source. Saves DOM weight
   and per-video preload pressure on satellites (no point loading
   middle's video on the left machine).
-- **Message format is `{type:'state', index, paused, ts}`.** Single
-  message type that covers both slide-position and pause sync. `ts`
-  is `Date.now()` from the sender; receivers drop messages with
-  `ts <= lastAppliedTs`. The relay doesn't parse — it forwards bytes
-  verbatim and caches the most-recent text frame.
+- **Message format is `{type:'state', index, ts}`.** Single message
+  type, single payload field. `ts` is `Date.now()` from the sender;
+  receivers drop messages with `ts <= lastAppliedTs`. The relay
+  doesn't parse — it forwards bytes verbatim and caches the most-
+  recent text frame. (Earlier versions also carried a `paused` field
+  for the now-removed pause UI; satellites silently ignore unknown
+  fields if a stale message ever arrives from a previous deployment.)
 - **Center re-broadcasts on every WS (re)connect**, even if state
   hasn't changed. This overwrites any stale cached state in the
   relay (e.g. after the center crashed and a satellite reconnected
@@ -438,23 +448,20 @@ The Victron design system file (referenced earlier in the build) is
   Both center and satellites reconnect; the relay LaunchAgent has
   `KeepAlive` so if the relay process crashes, launchd restarts
   it within ThrottleInterval (10s) and the kiosks reconnect.
+- **`visibilitychange` re-arms the timer on focus regain.** macOS may
+  throttle `setTimeout` when Chrome is backgrounded by an OS overlay;
+  on becoming visible again the center re-schedules the next advance
+  from "now" so the satellites don't see a multi-second freeze.
 - **Display geometry is operator-edited** in `kiosk/app3-displays.env`.
   The three `launch-app3-{center,left,right}.sh` scripts source it
   and pass `--window-position` + `--window-size` to Chrome. Chrome
   then `--kiosk`-fullscreens on whichever display contains the
   specified point. The defaults (3× 1920×1080, center as macOS Main
   Display, left=-1920, right=+1920) cover the most common setup.
-- **No text, no variants, no sinus background.** App 3 is the
-  simplest of the three on the rendering side — just fullscreen
-  media + the App 1 controls cluster on the center. Don't add text
-  overlays to App 3 without an explicit ask; the spec calls for
-  pure fullscreen photos.
-- **Pause behaviour propagates via state.** Center sets
-  `isPaused: true`, broadcasts, satellites mirror — pausing their
-  videos too (so videos on the satellites don't keep playing when
-  the operator pauses the slideshow). Auto-resume timer is
-  center-only; satellites just receive the eventual "unpaused"
-  broadcast.
+- **No text, no variants, no sinus background, no fonts shipped.**
+  App 3 is the simplest of the three on the rendering side — just
+  fullscreen media. Don't add text overlays / controls without an
+  explicit ask; the current spec is pure fullscreen photos/videos.
 - **`debug: true`** restores the cursor (same as App 1/2) AND shows
   a top-left HUD with role / WS state / current slide / last applied
   ts. Useful for verifying the sync flow during setup.
@@ -554,14 +561,16 @@ The Victron design system file (referenced earlier in the build) is
    the need for per-element overrides. Don't replace it with a
    body-only rule. Toggle off for testing via the `debug` config
    flag — see App 1 / App 2 architecture sections.
-13. **Countdown ring must live INSIDE the `<button>` element**, not as
-   a sibling. When it was a sibling: (a) the button's background
+13. **App 1: Countdown ring must live INSIDE the `<button>` element**,
+   not as a sibling. When it was a sibling: (a) the button's background
    painted on top of it (DOM-order = paint-order), so the ring
    "slipped behind" on `:active` press; (b) the ring didn't inherit
    the button's `transform: scale(.95)` press animation. Both fixed
-   by nesting. Don't move the SVG back outside the button.
-14. **Countdown ring uses `inset: -1px` to cover the button's 1 px
-   border.** `.ctrl-btn` is `width: 96px` with `box-sizing:
+   by nesting. Don't move the SVG back outside the button. (App 3
+   used to have the same construction; it's gone now alongside the
+   rest of App 3's controls — see App 3 architecture.)
+14. **App 1: Countdown ring uses `inset: -1px` to cover the button's
+   1 px border.** `.ctrl-btn` is `width: 96px` with `box-sizing:
    border-box` and a `1 px solid` border, so the content (padding)
    box is 94×94. Without `inset: -1px` the ring SVG renders 94×94
    and a 1 px blue rim shows outside the white stroke. Don't drop
@@ -596,8 +605,9 @@ The Victron design system file (referenced earlier in the build) is
    `build.sh` + committing the resulting binaries, the App 3 install
    succeeds but the relay never starts and the satellites never sync.
 18. **App 3: config field is `middle`, role is `center`.** The
-   geographic field name (`middle`) and the UI-meaningful role name
-   (`center` — the one with the controls) don't match. There's a
+   geographic field name (`middle`) and the role name (`center` —
+   legacy from when this role had the App 1 controls cluster, since
+   removed) don't match. There's a
    `ROLE_TO_FIELD = { center: 'middle', left: 'left', right: 'right' }`
    map in `app3-multi-screen/index.html` that bridges them once at
    boot. If you rename either side, rename both — and update the
@@ -692,9 +702,8 @@ intersolar-tv-apps/                  # local folder; repo is victron-exhibition-
 │   ├── config.js                   # window.APP_CONFIG = { video, buttons[…], debug }
 │   └── media/main.mp4              # placeholder Sintel trailer (replace for production)
 ├── app3-multi-screen/
-│   ├── index.html                  # reads ?role=center|left|right; renders accordingly
+│   ├── index.html                  # reads ?role=center|left|right; renders accordingly. No controls — auto-advance only.
 │   ├── config.js                   # window.APP_CONFIG = { slideshow: { images: [{left,middle,right}] }, wsUrl }
-│   ├── fonts/museosans-700.ttf
 │   └── media/                      # slide-{1..N}-{left,middle,right}.jpg
 └── kiosk/
     ├── INSTALL.md                  # full setup + show-floor ops manual (incl. §3.7 App 3)

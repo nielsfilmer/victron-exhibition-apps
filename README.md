@@ -26,10 +26,9 @@ intersolar-tv-apps/
 │   ├── index.html
 │   ├── config.js
 │   └── media/           # main.mp4 (placeholder)
-├── app3-multi-screen/   # 3-screen synced slideshow (center has controls)
+├── app3-multi-screen/   # 3-screen synced auto-advance slideshow (no controls)
 │   ├── index.html
 │   ├── config.js
-│   ├── fonts/
 │   └── media/           # slide-N-{left,middle,right}.jpg
 ├── Install App 1.command   # double-click in Finder → install App 1 kiosk
 ├── Install App 2.command   # double-click in Finder → install App 2 kiosk
@@ -145,14 +144,13 @@ window.APP_CONFIG = {
 **Behaviour**
 - Three Chrome `--kiosk` instances, one per display (center / left / right).
 - All three show fullscreen photos or videos (`object-fit: cover`).
-- The **center** display also hosts the controls cluster from App 1
-  (back / pagination / next + countdown ring / pause) and is the only
-  touchscreen / input device.
-- Every slide change on the center is **broadcast to the left + right
-  instances** via a tiny localhost-only WebSocket relay so all three
-  screens stay in lockstep. Pause, swipe, and auto-advance are all
-  authoritative on the center; satellites just mirror what they're
-  told.
+- **No on-screen controls and no visitor interaction.** The slideshow
+  auto-advances on a config-driven timer; every slide change on the
+  center is **broadcast to the left + right instances** via a tiny
+  localhost-only WebSocket relay so all three screens stay in
+  lockstep. The center role distinguishes itself only by owning the
+  timer + originating the broadcasts; visually it's identical to the
+  satellites.
 
 **Architecture**
 - Three separate Chrome `--kiosk` processes (one per display, each
@@ -179,10 +177,8 @@ window.APP_CONFIG = {
     autoAdvanceMs: 8000,
     transitionMs:  700,
   },
-  pauseMinutes:  5,
-  controlsAlign: "right",
-  debug:         false,
-  wsUrl:         "ws://127.0.0.1:8743/ws",
+  debug: false,
+  wsUrl: "ws://127.0.0.1:8743/ws",
 };
 ```
 
@@ -190,8 +186,8 @@ window.APP_CONFIG = {
 |---|---|
 | `slideshow.images[]` | Any number of `{left, middle, right, loop?, autoAdvanceMs?}` objects. Each side is independently auto-detected as image or video by file extension (so left can be a video while middle is an image). |
 | `slideshow.images[].loop` | _Videos only._ Applies to all three sides of that slide. Default `true`. |
-| `slideshow.images[].autoAdvanceMs` | _Optional per-slide override_ of the global `slideshow.autoAdvanceMs`. `0` = stay until manual navigation. |
-| `slideshow.autoAdvanceMs` / `transitionMs` / `pauseMinutes` / `controlsAlign` / `debug` | Same semantics as App 1. The controls cluster only ever renders on the center role. |
+| `slideshow.images[].autoAdvanceMs` | _Optional per-slide override_ of the global `slideshow.autoAdvanceMs`. `0` makes the slide stay forever — only useful if every slide is `0` (kiosk holds a single hero slide), since there are no on-screen controls to manually advance. |
+| `slideshow.autoAdvanceMs` / `transitionMs` / `debug` | Same semantics as App 1. App 3 has no `pauseMinutes` / `controlsAlign` (no controls). |
 | `wsUrl` | WebSocket relay address. Default `ws://127.0.0.1:8743/ws` — only change if you also change the `-addr` flag in `kiosk/launch-app3-ws.sh`. |
 
 **Setup** — three displays, one Mac, one WebSocket relay binary.
