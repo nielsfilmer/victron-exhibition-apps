@@ -5,28 +5,39 @@
 # Example:
 #   https://example.com/path/to/victron-exhibit-content-2026.zip
 #
-# Expected zip layout (only the media folders matter — everything else
-# in the zip is ignored and cleaned up):
+# Expected zip layout (only media/ folders and config.js files are
+# picked up — everything else in the zip is ignored and cleaned up):
 #   app1-slideshow/
-#     media/
+#     media/                 (optional — replaces app1-slideshow/media/)
 #       slide-1.jpg
 #       slide-2.jpg
 #       …
+#     config.js              (optional — replaces app1-slideshow/config.js)
 #   app2-chapters/
 #     media/
 #       main.mp4
+#     config.js
 #   app3-multi-screen/
 #     media/
 #       slide-1-left.jpg   slide-1-middle.jpg   slide-1-right.jpg
 #       slide-2-left.jpg   slide-2-middle.jpg   slide-2-right.jpg
 #       …
+#     config.js
 #
-# Only the apps the operator is actually running need their media/
-# folder in the zip — missing ones are left untouched on disk.
+# Each of `media/` and `config.js` is independent and OPTIONAL per app.
+# A zip can include any combination: just media, just config, both, or
+# neither for a given app. Anything missing from the zip is left
+# untouched on disk — handy if the content team ships a quick config-
+# only fix or a media-only refresh.
+#
+# Files the script NEVER touches: HTML, CSS, fonts, launch scripts,
+# plists, the ws-relay binary, and kiosk/app3-displays.env
+# (operator-edited per-Mac hardware geometry).
 #
 # The script accepts a one-level-deep nested layout too (e.g. when the
 # zip extracts into a single top-level folder named after the package):
 #   victron-content-2026/
 #     app1-slideshow/media/…
+#     app1-slideshow/config.js
 #     app2-chapters/media/…
 #     app3-multi-screen/media/…

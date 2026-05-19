@@ -17,12 +17,16 @@ cat <<'BANNER'
 
 This will:
   - download the zip from the URL in kiosk/content-url.txt,
-  - REPLACE the media in app1-slideshow/media/, app2-chapters/media/,
-    and app3-multi-screen/media/,
+  - REPLACE the media/ folder AND config.js for any app whose folder
+    is in the zip (app1-slideshow / app2-chapters / app3-multi-screen),
   - delete the downloaded zip + everything else,
-  - restart the running kiosk so the new media is on screen.
+  - restart the running kiosk so the new content is on screen.
 
-Config files, HTML, JS, fonts — left alone.
+Each app's media/ + config.js are independent — the zip may include
+either, both, or neither for any app. Anything missing is left alone.
+
+HTML, CSS, fonts, launch scripts, the ws-relay binary, and
+app3-displays.env — never touched.
 
 BANNER
 

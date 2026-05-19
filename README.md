@@ -35,7 +35,7 @@ intersolar-tv-apps/
 ├── Install App 2.command   # double-click in Finder → install App 2 kiosk
 ├── Install App 3.command   # double-click in Finder → install App 3 (4 LaunchAgents)
 ├── Update.command          # double-click in Finder → pull latest code + reload
-├── Update media.command    # double-click in Finder → download latest media zip + reload
+├── Update media.command    # double-click in Finder → download latest content zip (media + config) + reload
 └── kiosk/
     ├── launch-app1.sh
     ├── launch-app2.sh
@@ -50,7 +50,7 @@ intersolar-tv-apps/
     ├── bin/                 # prebuilt arm64 + x86_64 relay binaries (committed)
     ├── install.sh           # one-shot LaunchAgent install / uninstall
     ├── update.sh            # pull latest code from GitHub + reload the kiosk
-    ├── content-update.sh    # download media zip from content-team URL + reload
+    ├── content-update.sh    # download content zip from content-team URL → replace each app's media/ + config.js, reload
     ├── content-url.txt      # one-line URL the content team gives you
     └── INSTALL.md           # full kiosk-Mac + touchscreen setup + show-floor ops
 ```
