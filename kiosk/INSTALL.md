@@ -16,6 +16,7 @@ non-developer Victron staffer to follow at the show.
 |---|---|---|---|
 | Niels Filmer | Initial document — manual for the rewritten kiosk apps (Victron Exhibition Apps). | V1.0 | 14-5-2026 |
 | Niels Filmer | Added App 3 (3-screen synced kiosk slideshow + WebSocket sync relay); content-update.sh now also replaces each app's config.js when present in the zip. | V1.1 | 19-5-2026 |
+| Niels Filmer | Removed App 3's on-screen controls — the kiosk is now display-only, three fullscreen photos/videos auto-advancing on a config-driven timer (no visitor interaction). None of the three displays needs to be a touchscreen anymore. | V1.2 | 19-5-2026 |
 
 ---
 
@@ -40,22 +41,18 @@ doesn't trigger pinch-zoom).
 
 ### 1.1 Extra hardware for App 3 (3-screen synced slideshow)
 
-App 3 spans **three displays**: a center display with controls + a
-photo, plus a left and right display each showing a photo, all three
-synced. Only the center display needs to be touchscreen.
+App 3 spans **three displays**, each showing a fullscreen photo or
+video. There are no on-screen controls and no visitor interaction —
+the slideshow auto-advances on a config-driven timer, with all three
+displays kept in sync by a small local relay. **None of the three
+displays needs to be a touchscreen**, since nothing takes input.
 
 | | Recommendation | Notes |
 |---|---|---|
-| Center display | **IIyama ProLite TF1633MSC** (as above, or newer) | Touch — visitors use this one. |
-| Left + right displays | Two more displays at the **same resolution as the center**, ideally matching size for visual continuity | No touch needed. Standard HDMI displays are fine. |
+| Center / left / right displays | Three displays at the **same resolution**, ideally matching size for visual continuity | Any standard HDMI displays. No touch input needed. |
 | Computer | **Apple Mac Mini M2 or newer** | Must have 3 video outputs. The M2 has 1× HDMI + 2× Thunderbolt 4 (each does USB-C → HDMI via a $20 adapter). |
 | HDMI cables | 3× | One per display. |
-| USB cable | 1× | Mac → center touchscreen's USB-B (touch input). |
 | HDMI adapter | 2× USB-C/Thunderbolt → HDMI | For the two non-HDMI Mac outputs. |
-
-For the touch USB-B from the touchscreen, plug into one of the Mac
-Mini's USB-A ports (or via a USB-A → USB-C adapter into a Thunderbolt
-port).
 
 ---
 
@@ -185,11 +182,12 @@ location to refresh the path.
 - **App 2** — fullscreen video with invisible chapter buttons.
   Use this for a "press the on-screen image to jump to that section"
   experience (single display).
-- **App 3** — synced 3-screen slideshow. The middle screen has the
-  same controls as App 1; left + right are passive photo displays.
-  Use this for a wide cinematic kiosk where three photos animate in
-  unison. **Requires the extra hardware in §1.1 and the multi-screen
-  setup in §3.7.**
+- **App 3** — synced 3-screen slideshow. All three screens show
+  fullscreen photos or videos that auto-advance in unison. No
+  on-screen controls; no visitor interaction. Use this for a wide
+  cinematic kiosk where three matching photos animate together.
+  **Requires the extra hardware in §1.1 and the multi-screen setup
+  in §3.7.**
 
 ### 3.3 Install the LaunchAgent
 **Easy mode (no Terminal needed)** — open the project folder in
@@ -308,8 +306,9 @@ hardware and macOS arrangement right first; install second.
 
 **Step 1 — plug in all three displays.** Center display via HDMI to
 the Mac's HDMI port; left + right via USB-C/Thunderbolt → HDMI
-adapters into the Mac's Thunderbolt ports. Plug the center
-touchscreen's USB-B into the Mac. Power everything on.
+adapters into the Mac's Thunderbolt ports. Power everything on. No
+USB / touch input needed for any of the three displays — App 3 is
+display-only.
 
 **Step 2 — arrange the displays in macOS.**
 `System Settings → Displays → Arrange…`
@@ -324,7 +323,9 @@ decide which Chrome window opens on which display).
 Arrange pane: at the top of the center rectangle there's a white
 strip representing the menu bar. Drag it onto the center rectangle
 if it isn't already there. This sets the center display as the macOS
-"Main Display" — the kiosk install assumes this.
+"Main Display" — the kiosk install assumes this. (The "center" role
+is the one that runs the auto-advance timer + broadcasts to the
+satellites; no controls or input live on any screen.)
 
 **Step 4 — confirm "Use as separate display" mode.** Not mirrored.
 Each display should show its own desktop wallpaper, not a copy of
@@ -449,10 +450,15 @@ mis-filed `config.js` — any of these is the signal to roll back.
   or run `./kiosk/update.sh` to restart all four LaunchAgents.
 - Drop new images / videos into `app3-multi-screen/media/`, reference
   their filenames from `config.js` under `left:` / `middle:` / `right:`.
+- Auto-advance timing: every slide stays for `slideshow.autoAdvanceMs`
+  (default 8000 ms) unless it has its own `autoAdvanceMs` override.
+  `0` on a slide makes it stay forever — useful only if every slide
+  is `0` or if you want the kiosk to hold on a single hero slide.
 - Display geometry (resolution, layout): edit
   `kiosk/app3-displays.env` and run `./kiosk/update.sh` to restart.
-- The middle (touch) screen is authoritative — slide changes happen
-  there and propagate to left/right via the local WebSocket relay.
+- The middle screen runs the auto-advance timer and broadcasts each
+  slide change to the left + right screens via the local WebSocket
+  relay. There are no on-screen controls and no visitor interaction.
   If left/right go out of sync, see §6.3 troubleshooting.
 
 ### 4.4 Manual edits — App 2 (chapter video)

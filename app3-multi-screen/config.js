@@ -2,10 +2,13 @@
 // Loaded by index.html via a <script> tag so it works over file:// (no server needed).
 //
 // App 3 runs as THREE separate Chrome --kiosk instances (one per
-// screen) plus a tiny WebSocket relay that syncs them. The middle
-// screen hosts the controls + is authoritative; left/right are
-// passive receivers. See kiosk/INSTALL.md §3.7 for the multi-screen
-// setup; see kiosk/ws-relay/README.md for the relay.
+// screen) plus a tiny WebSocket relay that keeps them in sync. There
+// are no on-screen controls — every screen shows a fullscreen photo
+// or video, and the slideshow auto-advances on a config-driven timer.
+// The middle screen owns the timer (it's the only role that runs the
+// setTimeout); left + right are passive receivers. See
+// kiosk/INSTALL.md §3.7 for the multi-screen setup; see
+// kiosk/ws-relay/README.md for the relay.
 //
 // Per slide:
 //   left      — path to the media shown on the LEFT screen
@@ -26,27 +29,21 @@
 //   autoAdvanceMs — optional per-slide duration in ms. Overrides
 //                 the global `slideshow.autoAdvanceMs` for this
 //                 slide only. `0` disables auto-advance — the
-//                 slide stays until the user advances manually.
+//                 slide stays forever (use only if every other
+//                 slide also has 0, or if you want the kiosk to
+//                 hold on a single hero slide and never move on).
 //
 // Top level:
-//   slideshow.autoAdvanceMs  — how long the countdown ring takes to fill (default 8000)
-//   slideshow.transitionMs   — slide crossfade duration (default 700)
-//   pauseMinutes             — minutes the slideshow stays paused after the pause
-//                              button is pressed; after this elapses the countdown
-//                              starts over from empty (default 5; set 0 to pause
-//                              indefinitely until manually resumed).
-//   controlsAlign            — "left" (default) or "right". Pins the controls
-//                              cluster (back / X-of-Y / next+ring / pause) to
-//                              the bottom-left or bottom-right of the MIDDLE
-//                              screen. Cluster order is preserved either way.
+//   slideshow.autoAdvanceMs  — how long each slide stays before the
+//                              center auto-advances (default 8000).
+//   slideshow.transitionMs   — slide crossfade duration (default 700).
 //   debug                    — `false` (default) is the kiosk behaviour.
 //                              `true` adds `body.debug` to the document,
-//                              which today restores the native mouse cursor
-//                              and shows the role + sync state in the top-
-//                              left HUD (useful for development / testing
-//                              without a touchscreen). Class is shared with
-//                              App 1 / App 2 so future debug toggles can hang
-//                              off the same flag.
+//                              which restores the native mouse cursor
+//                              AND shows the role + WS state + current
+//                              slide in a top-left HUD. Useful for
+//                              development / testing without a touchscreen.
+//                              Class is shared with App 1 / App 2.
 //   wsUrl                    — WebSocket relay address (default
 //                              "ws://127.0.0.1:8743/ws"). Only change if
 //                              you also change the `-addr` flag in
@@ -69,8 +66,6 @@ window.APP_CONFIG = {
     autoAdvanceMs: 8000,
     transitionMs: 700,
   },
-  pauseMinutes: 5,
-  controlsAlign: "right",
   debug: false,
   wsUrl: "ws://127.0.0.1:8743/ws",
 };

@@ -51,13 +51,15 @@ shape:
 {
   "type": "state",
   "index": 2,
-  "paused": false,
   "ts": 1715974800000
 }
 ```
 
 `ts` is `Date.now()` from the sender; satellites drop messages with
 `ts <= lastAppliedTs` to guard against any future re-ordering.
+(Earlier versions also carried a `paused` field for the now-removed
+pause UI; satellites silently ignore unknown fields, so a stale
+cached message with `paused` won't break anything.)
 
 ## Port choice
 
