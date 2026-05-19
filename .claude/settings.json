@@ -3,7 +3,21 @@
     "allow": [
       "Bash(git *)",
       "Bash(gh pr create *)",
-      "Bash(gh pr review *)"
+      "Bash(gh pr review *)",
+
+      "Bash(mkdir:*)",
+      "Bash(rmdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(chmod:*)",
+      "Bash(unzip:*)",
+
+      "Bash(go mod:*)",
+      "Bash(go get:*)",
+      "Bash(go build:*)",
+
+      "Bash(./kiosk/build-docx.sh)",
+      "Bash(./kiosk/ws-relay/build.sh)"
     ]
   }
 }
