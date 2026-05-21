@@ -376,12 +376,48 @@
   }
   body.error #error { display: flex; }
 </style>
+<script>
+// Version bootstrap. App 1 ships in three content-specific versions
+// (ESS / OL / Microgrid); the ?version= URL parameter picks which one.
+// Each version lives in app1-slideshow/versions/<name>/ with its own
+// config.js + media/. The shared code (index.html, fonts/) and the
+// install/launch scripts (.command files + LaunchAgent plists) are
+// version-agnostic — only this bootstrap and the in-page renderer
+// know about versions.
+//
+// Why document.write — it's the only way to synchronously inject a
+// `<script src>` into the document so the IIFE at the bottom of <body>
+// can rely on window.APP_CONFIG being populated when it runs. Dynamic
+// script injection + a Promise gate would require restructuring the
+// existing IIFE around an async wait. `document.write` during initial
+// parse is synchronous and doesn't trigger Chrome's parser-blocking
+// intervention for same-origin (file://) scripts.
+(function () {
+  const VALID = ['ess', 'ol', 'microgrid'];
+  const params = new URLSearchParams(location.search);
+  const v = params.get('version');
+  if (!v || !VALID.includes(v)) {
+    // Defer error rendering — <body> isn't parsed yet. The IIFE at the
+    // bottom of <body> reads this flag and renders the message via the
+    // existing #error overlay.
+    window.__appBootError = 'no-version';
+    return;
+  }
+  window.APP_VERSION = v;
+  // Note the escape on </script> — the literal token would close this
+  // very <script> block. <\/ side-steps the parser.
+  document.write('<script src="versions/' + v + '/config.js"><\/script>');
+})();
+</script>
 </head>
 <body>
   <div id="stage">
-    <!-- 1. Sinus background pattern (full 12-wave SVG from Figma) -->
+    <!-- 1. Sinus background pattern (full 12-wave SVG from Figma).
+            `src` is set by the IIFE once window.APP_VERSION is known
+            (versions/<v>/media/sinus-bg.svg). HTML omits `src` so it
+            doesn't 404 if the version bootstrap fails validation. -->
     <div id="sinus-bg" aria-hidden="true">
-      <img src="media/sinus-bg.svg" alt="">
+      <img alt="">
     </div>
 
     <!-- 2. Slides — each slide carries its own variant class that positions
@@ -433,9 +469,13 @@
   </div>
   <div id="error"></div>
 
-<script src="config.js"></script>
 <script>
 (function () {
+  // The version's config.js was injected via document.write in <head>
+  // (see the bootstrap), so window.APP_CONFIG is already populated by
+  // the time this IIFE runs — provided the version bootstrap didn't
+  // bail out via window.__appBootError. That case is handled below,
+  // before any APP_CONFIG access.
   const $ = (s) => document.querySelector(s);
   const stage      = $('#stage');
   const slidesEl   = $('#slides');
@@ -455,11 +495,39 @@
     console.error(msg);
   };
 
+  // Version bootstrap error — set in <head> by the ?version= parser
+  // when the URL has no `version` param or one that isn't in the
+  // valid list. (A "config script 404" failure mode falls through to
+  // the existing `if (!cfg)` check below — the err.log will show the
+  // generic "config.js did not set window.APP_CONFIG" message, which
+  // is enough to diagnose since the operator's next move is to check
+  // the file.)
+  if (window.__appBootError === 'no-version') {
+    return showError(
+      'This Chrome instance was opened without a valid ?version= parameter. ' +
+      'Install the kiosk via one of the "Install App 1 - …" commands in the project root.'
+    );
+  }
+
   const cfg = window.APP_CONFIG;
   if (!cfg) return showError('config.js did not set window.APP_CONFIG — check the file.');
 
   const slides        = (cfg.slideshow && cfg.slideshow.images) || [];
   if (!slides.length) return showError('config.js: slideshow.images is empty');
+
+  // All media paths in config.js are relative to the version directory.
+  // The content-team's config.js stays version-agnostic — paths like
+  // "media/slide-1.jpg" are identical to the pre-versions structure.
+  // versionPath() prepends versions/<v>/ at render time.
+  const versionPath = (p) => 'versions/' + window.APP_VERSION + '/' + p;
+
+  // Now that the version is known, point the sinus background at the
+  // version's copy. The HTML omits the <img>'s src so it doesn't 404
+  // during the brief gap before the IIFE runs (or at all if the
+  // version bootstrap failed validation, in which case the error
+  // overlay covers the whole viewport anyway).
+  const sinusBgImg = document.querySelector('#sinus-bg img');
+  if (sinusBgImg) sinusBgImg.src = versionPath('media/sinus-bg.svg');
 
   // Use `typeof === 'number'` (not `||`) so an explicit 0 is honoured:
   //   autoAdvanceMs: 0 → countdown disabled (`if (autoAdvanceMs <= 0)` later),
@@ -533,7 +601,7 @@
     if (isVideo) {
       mediaEl = document.createElement('video');
       mediaEl.className = 'slide-img';        // shares all the .slide-img CSS (object-fit, opacity, scale entry)
-      mediaEl.src = s.src;
+      mediaEl.src = versionPath(s.src);
       mediaEl.muted = true;                   // required for autoplay; kiosk runs silent anyway
       mediaEl.playsInline = true;
       mediaEl.loop = s.loop !== false;        // loop by default; pass `loop: false` per slide to disable
@@ -547,7 +615,7 @@
     } else {
       mediaEl = document.createElement('img');
       mediaEl.className = 'slide-img';
-      mediaEl.src = s.src;
+      mediaEl.src = versionPath(s.src);
       mediaEl.alt = s.title || ('Slide ' + (i + 1));
       mediaEl.draggable = false;
       mediaEl.loading = i === 0 ? 'eager' : 'lazy';
