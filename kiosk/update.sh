@@ -88,7 +88,9 @@ echo
 RELOADED=0
 UID_NUM="$(id -u)"
 KIOSK_LABELS=(
-  com.intersolar.app1
+  com.intersolar.app1-ess
+  com.intersolar.app1-ol
+  com.intersolar.app1-microgrid
   com.intersolar.app2
   com.intersolar.app3-ws
   com.intersolar.app3-center
