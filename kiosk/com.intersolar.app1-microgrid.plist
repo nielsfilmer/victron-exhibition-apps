@@ -1,19 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  LaunchAgent for App 1 kiosk.
-  Install path: ~/Library/LaunchAgents/com.intersolar.app1.plist
+  LaunchAgent for App 1 kiosk — Microgrid content version.
+  Install path: ~/Library/LaunchAgents/com.intersolar.app1-microgrid.plist
   Replace __PROJECT_DIR__ with the absolute path to the project root before installing.
+
+  App 1 ships in three content versions (ESS / OL / Microgrid). Only
+  ONE may be loaded at a time per CLAUDE.md. The wrapper script
+  launch-app1-microgrid.sh calls launch-app1.sh with the version arg,
+  which resolves the right config.js + media/ under
+  app1-slideshow/versions/microgrid/.
 -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.intersolar.app1</string>
+  <string>com.intersolar.app1-microgrid</string>
 
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>__PROJECT_DIR__/kiosk/launch-app1.sh</string>
+    <string>__PROJECT_DIR__/kiosk/launch-app1-microgrid.sh</string>
   </array>
 
   <key>RunAtLoad</key>
@@ -29,10 +35,10 @@
   <integer>10</integer>
 
   <key>StandardOutPath</key>
-  <string>__PROJECT_DIR__/kiosk/app1.out.log</string>
+  <string>__PROJECT_DIR__/kiosk/app1-microgrid.out.log</string>
 
   <key>StandardErrorPath</key>
-  <string>__PROJECT_DIR__/kiosk/app1.err.log</string>
+  <string>__PROJECT_DIR__/kiosk/app1-microgrid.err.log</string>
 
   <key>EnvironmentVariables</key>
   <dict>
