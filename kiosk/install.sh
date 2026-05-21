@@ -74,7 +74,7 @@ refuse_if_protected_path() {
 
     mv "$p" "$HOME/$(basename "$p")"
     cd "$HOME/$(basename "$p")"
-    ./kiosk/install.sh ${1:-app1}
+    ./kiosk/install.sh ${1:-app1-ess}
 
 EOF
       exit 1
@@ -203,12 +203,14 @@ uninstall_one() {
 
 case "${1:-}" in
   app1-ess|app1-ol|app1-microgrid) install_app1_version "${1#app1-}" ;;
-  app1)
-    # Bare `app1` is ambiguous now that App 1 ships in three versions.
+  app1|app1-*)
+    # Bare `app1` OR an unknown app1-* variant (e.g. typo, wrong case,
+    # or a version that hasn't been added yet — see pitfall #21).
     # Don't guess for the operator — fail with the list of options so
     # they pick deliberately. This also catches anyone using the old
     # ./kiosk/install.sh app1 invocation and points them at the new
-    # command shape.
+    # command shape. Order matters: the three valid versions are
+    # matched above; everything else app1-shaped lands here.
     echo "App 1 ships in three content versions. Pick one:" >&2
     echo "  $0 app1-ess        # ESS content" >&2
     echo "  $0 app1-ol         # OL content" >&2

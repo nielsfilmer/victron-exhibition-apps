@@ -613,17 +613,24 @@ The Victron design system file (referenced earlier in the build) is
    the negative inset.
 15. **`caffeinate` is orphaned by the launch scripts.** Pre-existing
    bug, flagged by the PR #14 reviewer: the `trap '… $CAFFEINATE_PID
-   …' EXIT` in `launch-app{1,2}.sh` and the three App 3 Chrome
-   launchers (`launch-app3-{center,left,right}.sh`) is discarded by
-   the subsequent `exec "$CHROME"`, so the background
+   …' EXIT` in `launch-app1.sh`, `launch-app2.sh`, and the three
+   App 3 Chrome launchers (`launch-app3-{center,left,right}.sh`) is
+   discarded by the subsequent `exec "$CHROME"`, so the background
    `caffeinate -dimsu` outlives the LaunchAgent restart cycle and
-   accumulates across restarts. Not yet fixed — worth a dedicated PR.
-   If you're writing the fix, the canonical pattern is to spawn
+   accumulates across restarts. Not yet fixed — worth a dedicated
+   PR. If you're writing the fix, the canonical pattern is to spawn
    caffeinate, then `wait` for `$CHROME` in the foreground so the
-   trap fires when Chrome exits. **`launch-app3-ws.sh` is unaffected
-   — the ws relay doesn't `caffeinate`** (it's a tiny long-running
-   Go process with no display-sleep concern), so a fix only needs
-   to touch the five Chrome launchers.
+   trap fires when Chrome exits. **Unaffected scripts:**
+   - `launch-app3-ws.sh` — the ws relay doesn't `caffeinate`
+     (it's a tiny long-running Go process with no display-sleep
+     concern).
+   - `launch-app1-{ess,ol,microgrid}.sh` — the per-version thin
+     wrappers `exec` into `launch-app1.sh` immediately; they don't
+     spawn `caffeinate` themselves. The orphan bug lives in the
+     SHARED `launch-app1.sh`, where the fix needs to land.
+   So a fix only needs to touch the five Chrome launchers:
+   `launch-app1.sh`, `launch-app2.sh`, and the three
+   `launch-app3-{center,left,right}.sh`.
 16. **App 3: WS relay must bind 127.0.0.1, never 0.0.0.0.** The kiosk
    Mac is often on a public exhibition Wi-Fi. Binding to all interfaces
    would expose the relay to anyone on the same network, who could
@@ -673,20 +680,39 @@ The Victron design system file (referenced earlier in the build) is
     `--app=file://…/index.html?version=<v>`; manual ad-hoc dev runs
     it via `open -na "Google Chrome" --args
     --app="file://…/index.html?version=ess"`. The valid version
-    list is hardcoded in FOUR places — adding a fourth version
-    means touching all four:
-      1. `app1-slideshow/index.html` — `VALID` array in the
-         bootstrap script at the top of `<head>`.
-      2. `kiosk/launch-app1.sh` — the `case "$VERSION"` switch.
-      3. `kiosk/install.sh` — the `APP1_VERSIONS=(...)` array AND
-         the `case` statement at the bottom (both the install path
-         and the friendly-error `app1` branch).
-      4. A new `kiosk/launch-app1-<new>.sh` wrapper + a new
-         `kiosk/com.intersolar.app1-<new>.plist` + a new
-         `Install App 1 - <New>.command` at the project root,
-         plus `KIOSK_LABELS` entries in `kiosk/update.sh` and
-         `kiosk/content-update.sh`, and the docs (this file's
-         file map, README's tree, INSTALL.md §3.3).
+    list is hardcoded in MANY places — adding a fourth version
+    means touching ALL of them (silent failures otherwise: a missing
+    entry in any one of these can mean the new version doesn't
+    boot, doesn't get installed, doesn't get its media updated,
+    or doesn't get restarted after an update):
+      1. **Bootstrap validation** — `app1-slideshow/index.html` —
+         the `VALID` array in the bootstrap script at the top of
+         `<head>`.
+      2. **Launcher validation** — `kiosk/launch-app1.sh` — the
+         `case "$VERSION"` switch.
+      3. **Installer dispatch** — `kiosk/install.sh` — the
+         `APP1_VERSIONS=(...)` array (used by both the install
+         path AND the `uninstall app1` bulk-uninstall), AND the
+         `case "${1:-}"` at the bottom (the install token —
+         unknown `app1-*` tokens fall to the friendly-error
+         branch via the `app1|app1-*)` pattern).
+      4. **Updater target list** — `kiosk/content-update.sh` —
+         the `APPS=(...)` array (controls which folders the bulk
+         updater writes into; without an entry for the new
+         version, content drops silently skip it).
+      5. **LaunchAgent labels** — `KIOSK_LABELS` arrays in BOTH
+         `kiosk/content-update.sh` AND `kiosk/update.sh` (so
+         `launchctl kickstart -k` restarts the new version's
+         kiosk after a content drop or a code update).
+      6. **New launcher + plist + Finder command** — a new
+         `kiosk/launch-app1-<new>.sh` thin wrapper (mode 100755),
+         a new `kiosk/com.intersolar.app1-<new>.plist`, and a new
+         `Install App 1 - <New>.command` at the project root
+         (mode 100755 — `git ls-files --stage` should confirm).
+      7. **Docs** — this file's file map + "What this project
+         is" + the file map at the bottom; README's project tree;
+         INSTALL.md §3.3 (install commands + terminal-mode list)
+         and the change-control table row.
 
 ## Useful commands
 
