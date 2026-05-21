@@ -18,10 +18,18 @@ plus scripts to boot a Mac into any of them in Chrome kiosk mode.
 ```
 intersolar-tv-apps/
 ├── app1-slideshow/      # Slideshow with countdown + pause (Victron-styled)
-│   ├── index.html
-│   ├── config.js
-│   ├── fonts/           # museosans-700.ttf (self-hosted, no network calls)
-│   └── media/           # sinus-bg.svg + slide-1..5.jpg (4K placeholders)
+│   ├── index.html       # shared code — reads ?version=ess|ol|microgrid at boot
+│   ├── fonts/           # museosans-700.ttf (self-hosted, shared across versions)
+│   └── versions/        # three content versions, identical shape:
+│       ├── ess/         #   ESS content
+│       │   ├── config.js
+│       │   └── media/   # sinus-bg.svg + slide-1..5.jpg + sample-video.mp4 (placeholders)
+│       ├── ol/          #   OL content (same files as ess at seed time)
+│       │   ├── config.js
+│       │   └── media/
+│       └── microgrid/   #   Microgrid content (same files as ess at seed time)
+│           ├── config.js
+│           └── media/
 ├── app2-chapters/       # Fullscreen video with invisible hotspot buttons
 │   ├── index.html
 │   ├── config.js
@@ -30,18 +38,21 @@ intersolar-tv-apps/
 │   ├── index.html
 │   ├── config.js
 │   └── media/           # slide-N-{left,middle,right}.jpg
-├── Install App 1.command   # double-click in Finder → install App 1 kiosk
+├── Install App 1 - ESS.command         # double-click in Finder → install App 1 (ESS content)
+├── Install App 1 - OL.command          # double-click in Finder → install App 1 (OL content)
+├── Install App 1 - Microgrid.command   # double-click in Finder → install App 1 (Microgrid content)
 ├── Install App 2.command   # double-click in Finder → install App 2 kiosk
 ├── Install App 3.command   # double-click in Finder → install App 3 (4 LaunchAgents)
 ├── Update.command          # double-click in Finder → pull latest code + reload
 ├── Update media.command    # double-click in Finder → download latest content zip (media + config) + reload
 └── kiosk/
-    ├── launch-app1.sh
+    ├── launch-app1.sh                          # shared launcher — takes version as $1
+    ├── launch-app1-ess.sh / -ol.sh / -microgrid.sh  # thin wrappers per version
     ├── launch-app2.sh
     ├── launch-app3-center.sh / launch-app3-left.sh / launch-app3-right.sh
     ├── launch-app3-ws.sh    # tiny WebSocket relay that syncs the 3 App 3 windows
     ├── app3-displays.env    # operator-editable display geometry for App 3
-    ├── com.intersolar.app1.plist
+    ├── com.intersolar.app1-ess.plist / app1-ol.plist / app1-microgrid.plist
     ├── com.intersolar.app2.plist
     ├── com.intersolar.app3-ws.plist
     ├── com.intersolar.app3-center.plist / app3-left.plist / app3-right.plist
@@ -49,7 +60,7 @@ intersolar-tv-apps/
     ├── bin/                 # prebuilt arm64 + x86_64 relay binaries (committed)
     ├── install.sh           # one-shot LaunchAgent install / uninstall
     ├── update.sh            # pull latest code from GitHub + reload the kiosk
-    ├── content-update.sh    # download content zip from content-team URL → replace each app's media/ + config.js, reload
+    ├── content-update.sh    # download content zip from content-team URL → replace each target's media/ + config.js, reload
     ├── content-url.txt      # one-line URL the content team gives you
     ├── build-docx.sh        # dev tool: regenerate the .docx user manual from INSTALL.md
     ├── build-docx/          # Node project (marked + docx) that does the conversion
@@ -66,10 +77,13 @@ intersolar-tv-apps/
 Each app folder is self-contained: drop the folder anywhere on the kiosk Mac
 and open `index.html` in Chrome — no build step, no server.
 
-> **Note:** `app1-slideshow/media/slide-*.jpg` are placeholder photos from
-> picsum.photos (random landscape photography); `app1-slideshow/media/sample-video.mp4`
-> and `app2-chapters/media/main.mp4` are both the Sintel trailer (Blender
-> Foundation, CC). Swap them for production assets before the show.
+> **Note:** `app1-slideshow/versions/{ess,ol,microgrid}/media/slide-*.jpg`
+> are placeholder photos from picsum.photos (random landscape photography);
+> `app1-slideshow/versions/{ess,ol,microgrid}/media/sample-video.mp4` and
+> `app2-chapters/media/main.mp4` are both the Sintel trailer (Blender
+> Foundation, CC). All three App 1 versions ship with identical seed
+> content — the content team diverges them per version after install.
+> Swap them for production assets before the show.
 
 ---
 
@@ -77,6 +91,18 @@ and open `index.html` in Chrome — no build step, no server.
 
 Implements the UX from
 [Figma 6428-12557](https://www.figma.com/design/roKcuVfDcxoY3PFMvJQ3UX/.com---Dev-Ready?node-id=6428-12557).
+
+**Content versions** — App 1 ships in three content versions (`ess`,
+`ol`, `microgrid`), each with its own `config.js` and `media/` under
+`app1-slideshow/versions/<v>/`. The shared `index.html` reads
+`?version=<v>` from the URL at boot and loads that version's content.
+The three Finder install commands (`Install App 1 - ESS.command`,
+`Install App 1 - OL.command`, `Install App 1 - Microgrid.command`) and
+the matching LaunchAgent labels (`com.intersolar.app1-{ess,ol,microgrid}`)
+make sure only one version runs at a time — installing one auto-unloads
+the other two as siblings. Opening `index.html` directly in Chrome
+without `?version=<v>` shows the on-screen error overlay pointing
+operators at the three Finder commands.
 
 **Layout** — each slide carries a `variant` that positions the image and text:
 
@@ -240,9 +266,19 @@ window.APP_CONFIG = {
 
 ## Local development
 
-Just open the HTML in Chrome with a `file://` URL — both apps are pure
-HTML/CSS/JS with no build step. To rebuild the slide content or swap the
-video, drop new files in `media/` and update `config.js`.
+Open the HTML in Chrome with a `file://` URL — all three apps are pure
+HTML/CSS/JS with no build step. **App 1 requires a `?version=` query
+parameter** (one of `ess`, `ol`, `microgrid`), e.g.
+`file:///path/to/app1-slideshow/index.html?version=ess`. Without it
+you'll see the on-screen error overlay pointing at the three
+`Install App 1 - …` Finder commands.
+
+To rebuild slide content or swap the video, drop new files in the
+right `media/` (for App 1 this lives under `versions/<v>/media/`) and
+update the matching `config.js`. The content team's `config.js` stays
+version-agnostic — paths like `media/slide-1.jpg` are resolved against
+the version's folder at render time, so the same file layout that
+worked pre-versions still works inside each `versions/<v>/`.
 
 If Chrome blocks autoplay during testing, click the page once (the kiosk
 launcher script passes `--autoplay-policy=no-user-gesture-required` so this

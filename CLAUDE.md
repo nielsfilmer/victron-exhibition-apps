@@ -139,7 +139,11 @@ Three standalone HTML kiosk apps for touchscreen TVs at an exhibition stand,
 plus scripts that boot a Mac into any of them in Chrome kiosk mode.
 
 - `app1-slideshow/` — Victron-branded slideshow with four layout variants,
-  countdown ring + pause button, line-by-line title animation.
+  countdown ring + pause button, line-by-line title animation. Ships in
+  three content versions (`ess`, `ol`, `microgrid`), each with its own
+  `config.js` and `media/` under `versions/<v>/`. A `?version=<v>` URL
+  parameter selects which one to render — see "App 1 architecture"
+  below.
 - `app2-chapters/` — fullscreen video with invisible hotspot buttons that
   jump to per-button timestamps. Debug overlay for hotspot calibration.
 - `app3-multi-screen/` — synced 3-screen slideshow, no on-screen
@@ -152,11 +156,14 @@ plus scripts that boot a Mac into any of them in Chrome kiosk mode.
   (`kiosk/ws-relay/` source, `kiosk/bin/` prebuilt binaries). See
   "App 3 architecture" below + the carve-out in "Hard project
   constraints" for the relay rationale.
-- `kiosk/` — `launch-app{1,2}.sh`, App 3's four launch scripts
-  (`launch-app3-{ws,center,left,right}.sh`), `com.intersolar.app{1,2}.plist`,
-  the four App 3 plists, and `install.sh`. Templates `__PROJECT_DIR__`
-  into the plists and loads them as user LaunchAgents so the kiosk
-  auto-starts on login.
+- `kiosk/` — `launch-app1.sh` (shared App 1 launcher, takes version as
+  `$1`) plus three thin wrappers `launch-app1-{ess,ol,microgrid}.sh`
+  one per content version; `launch-app2.sh`; App 3's four launch
+  scripts (`launch-app3-{ws,center,left,right}.sh`); plists
+  (`com.intersolar.app1-{ess,ol,microgrid}.plist`,
+  `com.intersolar.app2.plist`, four App 3 plists); and `install.sh`.
+  Templates `__PROJECT_DIR__` into the plists and loads them as user
+  LaunchAgents so the kiosk auto-starts on login.
   `update.sh` pulls the latest `main` from GitHub (fast-forward
   only, refuses on uncommitted local changes or off-main HEAD) and
   uses `launchctl kickstart -k` to KILL + restart the loaded
@@ -167,17 +174,19 @@ plus scripts that boot a Mac into any of them in Chrome kiosk mode.
 - `kiosk/content-update.sh` + `kiosk/content-url.txt` — separate
   flow for the content team's bulk drops. Reads the URL from
   `content-url.txt` (one URL per file, comment lines `#` ignored),
-  downloads + unzips, then for each of the three apps it locates
-  `app{N}-…/media/` and/or `app{N}-…/config.js` inside the
-  extracted tree (accepts flat or one-level-deep nested layouts)
-  and REPLACES whichever it finds locally. Each app's media + config
-  is independent — a zip may include either, both, or neither for
-  any given app, and anything missing is left untouched. **HTML,
-  CSS, fonts, launch scripts, plists, the ws-relay binary, and
-  `kiosk/app3-displays.env` are NEVER touched** by content-update —
-  those belong to dev / ops, not the content team. After replacing,
-  deletes the temp extraction and `kickstart -k`-restarts any
-  loaded LaunchAgent.
+  downloads + unzips, then for each target it locates the target's
+  `media/` and/or `config.js` inside the extracted tree (accepts
+  flat or one-level-deep nested layouts) and REPLACES whichever it
+  finds locally. Targets are `app1-slideshow/versions/{ess,ol,microgrid}`
+  (App 1's three content versions, each handled independently),
+  `app2-chapters`, and `app3-multi-screen`. Each target's media +
+  config is independent — a zip may include either, both, or
+  neither for any given target, and anything missing is left
+  untouched. **HTML, CSS, fonts, launch scripts, plists, the
+  ws-relay binary, and `kiosk/app3-displays.env` are NEVER touched**
+  by content-update — those belong to dev / ops, not the content
+  team. After replacing, deletes the temp extraction and
+  `kickstart -k`-restarts any loaded LaunchAgent.
   The URL parsing is a pure-bash read loop (NOT `grep | head`) on
   purpose — `set -o pipefail` would kill the script when grep
   finds no matches (i.e. the file ships with only comments), and
@@ -187,11 +196,16 @@ plus scripts that boot a Mac into any of them in Chrome kiosk mode.
   parse time, not eval time — the operator flag has to come from
   a variable so `test` is the only option.
   Recovery from a bad content drop:
-  `git checkout -- app1-slideshow/{media,config.js} app2-chapters/{media,config.js} app3-multi-screen/{media,config.js}`
-  restores the committed defaults. The kiosk's on-screen error
-  overlay ("config.js did not set window.APP_CONFIG…") is the
-  signal to roll back when a malformed config gets shipped.
-- **Project root `*.command` files** — `Install App 1.command`,
+  `git checkout -- app1-slideshow/versions/ app2-chapters/{media,config.js} app3-multi-screen/{media,config.js}`
+  restores the committed defaults (the `app1-slideshow/versions/`
+  path covers all three version subfolders in one shot; everything
+  else under `app1-slideshow/` — `index.html`, `fonts/` — is out of
+  the content-team scope and isn't touched by content-update.sh).
+  The kiosk's on-screen error overlay ("config.js did not set
+  window.APP_CONFIG…") is the signal to roll back when a malformed
+  config gets shipped.
+- **Project root `*.command` files** — `Install App 1 - ESS.command`,
+  `Install App 1 - OL.command`, `Install App 1 - Microgrid.command`,
   `Install App 2.command`, `Install App 3.command`, `Update.command`,
   `Update media.command`.
   Double-click-from-Finder wrappers around `kiosk/install.sh` /
@@ -217,10 +231,12 @@ These came from the user explicitly and shape every decision:
    - No `fetch('config.json')` — Chrome blocks `fetch` over `file://`.
      Configs are loaded via `<script src="config.js">` which sets
      `window.APP_CONFIG`.
-   - Verify with `grep -nE 'https?://' index.html config.js`. The only
-     `http://` that's allowed anywhere is the W3C SVG namespace URI
-     (`xmlns="http://www.w3.org/2000/svg"`) — that's an XML identifier,
-     not a fetch.
+   - Verify with `grep -nE 'https?://' index.html config.js` (for App 1
+     glob the three version configs: `grep -nE 'https?://'
+     app1-slideshow/index.html app1-slideshow/versions/*/config.js`).
+     The only `http://` that's allowed anywhere is the W3C SVG
+     namespace URI (`xmlns="http://www.w3.org/2000/svg"`) — that's an
+     XML identifier, not a fetch.
    - **App 3 exception:** `app3-multi-screen/index.html` opens a
      WebSocket to `ws://127.0.0.1:8743/ws` — see constraint #6.
 2. **Standalone folders.** Each app folder must be copy-pasteable onto
@@ -284,6 +300,26 @@ The Victron design system file (referenced earlier in the build) is
 
 ## App 1 architecture (key decisions)
 
+- **Three content versions, one shared codebase.** App 1 ships in three
+  versions — `ess`, `ol`, `microgrid` — each with its own `config.js`
+  and `media/` under `app1-slideshow/versions/<v>/`. The shared
+  `index.html` reads `?version=<v>` from the URL at boot via a
+  bootstrap `<script>` in `<head>`, validates against the three valid
+  names, sets `window.APP_VERSION`, and `document.write`s the matching
+  `<script src="versions/<v>/config.js">` into the document so the
+  existing IIFE at the end of `<body>` finds `window.APP_CONFIG`
+  populated when it runs (no async restructuring of the IIFE was
+  needed). All media paths in `config.js` are resolved at render time
+  via a `versionPath()` helper that prepends `versions/<v>/` — the
+  content team's `config.js` stays version-agnostic with paths like
+  `"media/slide-1.jpg"`, identical to the pre-versions structure. The
+  sinus-bg `<img>` has no static `src` in the HTML (so it doesn't 404
+  if the version bootstrap fails); JS sets its `src` to
+  `versionPath('media/sinus-bg.svg')` once the version is known.
+  Missing or invalid `?version=` → the existing on-screen error
+  overlay with a message pointing operators at the three
+  `Install App 1 - …` Finder commands. See pitfall #21 for the four
+  places to touch if you add a fourth version.
 - **One `.slide` container per slide.** Each carries a `variant-*` class
   (`variant-default` / `variant-large-image` / `variant-text-right` /
   `variant-fullscreen`) that positions the inner image + text. Only one
@@ -630,6 +666,27 @@ The Victron design system file (referenced earlier in the build) is
    relies on the coordinates in `app3-displays.env` matching the
    actual macOS display arrangement — see INSTALL.md §3.7 for the
    pre-install steps that get the arrangement right.
+21. **App 1: `?version=` is required.** Opening
+    `app1-slideshow/index.html` directly in Chrome (without
+    `?version=ess|ol|microgrid`) shows the on-screen error overlay.
+    The three LaunchAgent launchers pass it via
+    `--app=file://…/index.html?version=<v>`; manual ad-hoc dev runs
+    it via `open -na "Google Chrome" --args
+    --app="file://…/index.html?version=ess"`. The valid version
+    list is hardcoded in FOUR places — adding a fourth version
+    means touching all four:
+      1. `app1-slideshow/index.html` — `VALID` array in the
+         bootstrap script at the top of `<head>`.
+      2. `kiosk/launch-app1.sh` — the `case "$VERSION"` switch.
+      3. `kiosk/install.sh` — the `APP1_VERSIONS=(...)` array AND
+         the `case` statement at the bottom (both the install path
+         and the friendly-error `app1` branch).
+      4. A new `kiosk/launch-app1-<new>.sh` wrapper + a new
+         `kiosk/com.intersolar.app1-<new>.plist` + a new
+         `Install App 1 - <New>.command` at the project root,
+         plus `KIOSK_LABELS` entries in `kiosk/update.sh` and
+         `kiosk/content-update.sh`, and the docs (this file's
+         file map, README's tree, INSTALL.md §3.3).
 
 ## Useful commands
 
@@ -638,21 +695,23 @@ The Victron design system file (referenced earlier in the build) is
 # HTML/JS only on purpose — broadening to the whole repo would pick up
 # README links and the W3C SVG namespace identifier in `sinus-bg.svg`, which
 # are not actual fetches.
-grep -nE 'https?://' app1-slideshow/index.html app1-slideshow/config.js \
+grep -nE 'https?://' app1-slideshow/index.html app1-slideshow/versions/*/config.js \
                       app2-chapters/index.html  app2-chapters/config.js \
                       app3-multi-screen/index.html app3-multi-screen/config.js
 # App 3's index.html contains `ws://127.0.0.1:8743/ws` — that's the
 # expected loopback WebSocket, not a network call. It's the only ws://
 # in any runtime file. Hard constraint #6 documents why.
 
-# Check the build runs at 1920×1080 in a fresh Chrome profile
+# Check the build runs at 1920×1080 in a fresh Chrome profile (pick a
+# content version — App 1 requires ?version=ess|ol|microgrid)
 open -na "Google Chrome" --args \
   --kiosk --autoplay-policy=no-user-gesture-required \
   --user-data-dir=/tmp/kiosk-test \
-  --app="file://$PWD/app1-slideshow/index.html"
+  --app="file://$PWD/app1-slideshow/index.html?version=ess"
 
-# Install the LaunchAgent that boots a Mac into App 1
-./kiosk/install.sh app1
+# Install the LaunchAgent that boots a Mac into App 1 (pick a version —
+# installing one auto-unloads the other two as siblings)
+./kiosk/install.sh app1-ess     # or app1-ol, or app1-microgrid
 
 # Build (or rebuild) the App 3 WebSocket relay binaries — only needed
 # on the developer machine when changing kiosk/ws-relay/main.go.
@@ -687,16 +746,20 @@ intersolar-tv-apps/                  # local folder; repo is victron-exhibition-
 ├── CLAUDE.md                       # this file — context for Claude
 ├── .gitignore                      # excludes .DS_Store, .claude/, *.zip, kiosk logs, app3 profiles
 ├── .claude/settings.json           # project-scoped permissions (git/gh pr create+review)
-├── Install App 1.command           # Finder double-click → installs App 1 kiosk
+├── Install App 1 - ESS.command         # Finder double-click → installs App 1 (ESS content)
+├── Install App 1 - OL.command          # Finder double-click → installs App 1 (OL content)
+├── Install App 1 - Microgrid.command   # Finder double-click → installs App 1 (Microgrid content)
 ├── Install App 2.command           # Finder double-click → installs App 2 kiosk
 ├── Install App 3.command           # Finder double-click → installs App 3 (4 LaunchAgents)
 ├── Update.command                  # Finder double-click → git pull + restart kiosk
 ├── Update media.command            # Finder double-click → pull content zip + restart
 ├── app1-slideshow/
-│   ├── index.html                  # all CSS + JS inlined; loads config.js as <script>
-│   ├── config.js                   # window.APP_CONFIG = { slideshow: {...}, pauseMinutes }
-│   ├── fonts/museosans-700.ttf
-│   └── media/                      # sinus-bg.svg + slide-{1..5}.jpg (placeholders)
+│   ├── index.html                  # shared code — bootstrap reads ?version=, document.write's versions/<v>/config.js
+│   ├── fonts/museosans-700.ttf     # shared across versions
+│   └── versions/                   # three content versions, identical shape
+│       ├── ess/{config.js, media/}        # ESS — window.APP_CONFIG = { slideshow: {...}, pauseMinutes }
+│       ├── ol/{config.js, media/}         # OL — same shape as ess
+│       └── microgrid/{config.js, media/}  # Microgrid — same shape as ess
 ├── app2-chapters/
 │   ├── index.html
 │   ├── config.js                   # window.APP_CONFIG = { video, buttons[…], debug }
@@ -707,13 +770,18 @@ intersolar-tv-apps/                  # local folder; repo is victron-exhibition-
 │   └── media/                      # slide-{1..N}-{left,middle,right}.jpg
 └── kiosk/
     ├── INSTALL.md                  # full setup + show-floor ops manual (incl. §3.7 App 3)
-    ├── install.sh                  # templates plist paths + launchctl loads (app1/app2/app3)
+    ├── install.sh                  # templates plist paths + launchctl loads (app1-{ess,ol,microgrid}/app2/app3)
     ├── update.sh                   # git pull + launchctl kickstart -k the kiosk
-    ├── content-update.sh           # download content zip + replace media/ + config.js per app
+    ├── content-update.sh           # download content zip + replace media/ + config.js per target (App 1 has 3 version targets)
     ├── content-url.txt             # plain-text URL the content-update script reads
-    ├── launch-app1.sh              # exec'd by LaunchAgent; opens Chrome --kiosk
+    ├── launch-app1.sh              # shared App 1 launcher — takes version as $1
+    ├── launch-app1-ess.sh          # thin wrapper called by com.intersolar.app1-ess
+    ├── launch-app1-ol.sh           # thin wrapper called by com.intersolar.app1-ol
+    ├── launch-app1-microgrid.sh    # thin wrapper called by com.intersolar.app1-microgrid
     ├── launch-app2.sh
-    ├── com.intersolar.app1.plist
+    ├── com.intersolar.app1-ess.plist        # App 1 (ESS content) LaunchAgent
+    ├── com.intersolar.app1-ol.plist         # App 1 (OL content) LaunchAgent
+    ├── com.intersolar.app1-microgrid.plist  # App 1 (Microgrid content) LaunchAgent
     ├── com.intersolar.app2.plist
     ├── app3-displays.env           # operator-edited display geometry for App 3
     ├── launch-app3-ws.sh           # picks kiosk/bin/kiosk-ws-relay-$(uname -m)
