@@ -108,7 +108,7 @@ done
 
 if [[ "$RELOADED" -eq 0 ]]; then
   yellow "→ No kiosk LaunchAgent is currently loaded."
-  echo "  Run ./kiosk/install.sh app1   (or app2, or app3) to install + start one."
+  echo "  Run ./kiosk/install.sh app1-ess (or app1-ol/app1-microgrid/app2/app3) to install + start one."
 else
   green "✓ Restarted $RELOADED kiosk LaunchAgent(s) — kiosk is back up with the new files."
 fi

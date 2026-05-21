@@ -165,15 +165,17 @@ cd victron-exhibition-apps
 This creates `~/victron-exhibition-apps/` containing the whole
 project. **Don't rename or move the folder after install** — the
 LaunchAgent gets the absolute path baked in. If you do need to move
-it later, re-run `./kiosk/install.sh app1` (or `app2`) from the new
-location to refresh the path.
+it later, re-run the matching install command (e.g.
+`./kiosk/install.sh app1-ess`, `app1-ol`, `app1-microgrid`, or
+`app2`/`app3`) from the new location to refresh the path.
 
 > ⚠ **Don't clone into `~/Documents/`, `~/Desktop/`, `~/Downloads/`,
 > `~/Pictures/`, `~/Movies/`, or `~/Music/`.** macOS protects these
 > folders via TCC; LaunchAgents can't read scripts from them and the
 > kiosk will silently fail to start at boot ("Operation not permitted"
-> in `kiosk/app1.err.log`). `install.sh` refuses to install if the
-> project is in one of these locations. The home directory itself
+> in `kiosk/app1-<v>.err.log` for App 1, or `kiosk/app2.err.log`).
+> `install.sh` refuses to install if the project is in one of these
+> locations. The home directory itself
 > (`~/`) is fine, as is anywhere else outside the protected list
 > (e.g. an external drive mounted under `/Volumes/`).
 
