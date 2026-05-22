@@ -678,6 +678,7 @@
         // Build slides
         const slideContainers = [];
         const mediaEls = []; // each entry is either an <img> or a <video>
+        const syncWithVideo = []; // per-slide: true when the ring should track video playback
         const textEls = [];
         const bodyEls = [];
         const VALID_VARIANTS = new Set([
@@ -725,6 +726,22 @@
           const imgFrame = document.createElement("div");
           imgFrame.className = "slide-img-frame";
           const isVideo = VIDEO_EXT.test(s.src);
+          // `syncProgressWithVideo` is video-only, opt-in. When true, the
+          // countdown ring tracks video playback (currentTime/duration)
+          // instead of running an independent timer, and the pause button
+          // pauses the video too. Forces `loop = false` because the slide
+          // advances on the `ended` event — looping videos never fire it.
+          // Ignores any per-slide `autoAdvanceMs`; warn on misuse so a
+          // misconfigured slide is debuggable from DevTools.
+          const slideSync = isVideo && s.syncProgressWithVideo === true;
+          if (slideSync && typeof s.autoAdvanceMs === "number") {
+            console.warn(
+              "[slideshow] slide " +
+                (i + 1) +
+                ": syncProgressWithVideo overrides autoAdvanceMs",
+            );
+          }
+          syncWithVideo.push(slideSync);
           let mediaEl;
           if (isVideo) {
             mediaEl = document.createElement("video");
@@ -732,7 +749,9 @@
             mediaEl.src = versionPath(s.src);
             mediaEl.muted = true; // required for autoplay; kiosk runs silent anyway
             mediaEl.playsInline = true;
-            mediaEl.loop = s.loop !== false; // loop by default; pass `loop: false` per slide to disable
+            // Sync-mode slides MUST NOT loop — the slide advances on the
+            // video's `ended` event, which never fires while looping.
+            mediaEl.loop = slideSync ? false : s.loop !== false;
             // `metadata` keeps memory footprint low when many videos are configured —
             // only metadata is loaded ahead of time, full data streams when play() is called.
             mediaEl.preload = "metadata";
@@ -834,6 +853,17 @@
         let countdownRAF = null;
         let pauseResumeTimer = null;
         let isPaused = false;
+        // Bumped on every stopCountdown so any in-flight callbacks
+        // (rAF tick, deferred loadedmetadata, ended) check whether their
+        // captured token still matches and no-op otherwise. Without this,
+        // a rapid Next press while a sync-mode slide is waiting on
+        // metadata could later fire on a different slide.
+        let countdownToken = 0;
+        // Saved so stopCountdown can detach them. Used only by sync-mode
+        // slides; null otherwise.
+        let endedTarget = null;
+        let endedListener = null;
+        let pendingDeferCleanup = null;
 
         const setRingProgress = (fraction) => {
           const f = Math.min(1, Math.max(0, fraction));
@@ -841,9 +871,19 @@
         };
 
         const stopCountdown = () => {
+          countdownToken++;
           if (countdownRAF) {
             cancelAnimationFrame(countdownRAF);
             countdownRAF = null;
+          }
+          if (endedTarget && endedListener) {
+            endedTarget.removeEventListener("ended", endedListener);
+            endedTarget = null;
+            endedListener = null;
+          }
+          if (pendingDeferCleanup) {
+            pendingDeferCleanup();
+            pendingDeferCleanup = null;
           }
         };
 
@@ -862,8 +902,20 @@
 
         const startCountdown = () => {
           stopCountdown();
+          if (isPaused) return;
+          if (syncWithVideo[current]) {
+            startVideoSyncCountdown();
+          } else {
+            startTimerCountdown();
+          }
+        };
+
+        // Timer-driven countdown (the original path). Used for image slides,
+        // for non-sync video slides, and as the fallback when a sync-mode
+        // slide's metadata never loads within the safety-net window.
+        const startTimerCountdown = () => {
           currentMs = effectiveAutoAdvanceMs(current);
-          if (currentMs <= 0 || isPaused) return;
+          if (currentMs <= 0) return;
           countdownStart = performance.now();
           setRingProgress(0);
           const tick = (now) => {
@@ -876,6 +928,83 @@
               countdownRAF = null;
               nextSlide();
             }
+          };
+          countdownRAF = requestAnimationFrame(tick);
+        };
+
+        // Sync-mode countdown — ring fraction = currentTime / duration,
+        // polled via rAF (not `timeupdate`, which fires at ~4 Hz and looks
+        // choppy). Slide advances on the video's natural `ended` event.
+        // renderSlide() has already started playback by the time we get
+        // here (or will skip it when paused — see renderSlide gating).
+        const SYNC_METADATA_TIMEOUT_MS = 1000;
+        const startVideoSyncCountdown = () => {
+          const myToken = countdownToken;
+          const video = mediaEls[current];
+          const dur = video && video.duration;
+
+          // Metadata may not be loaded yet on cold boot or first-visit of a
+          // slide. Defer entry until `loadedmetadata` fires; if it doesn't
+          // within SYNC_METADATA_TIMEOUT_MS, fall back to timer mode so the
+          // ring isn't stuck empty forever. The fallback uses
+          // `effectiveAutoAdvanceMs(current)` — i.e. the slide's own
+          // `autoAdvanceMs` if set, otherwise the global default.
+          if (!Number.isFinite(dur) || dur <= 0) {
+            // Reset the ring immediately so the previous slide's progress
+            // isn't left visible while we wait for metadata to load.
+            setRingProgress(0);
+            let safety;
+            const onMeta = () => {
+              if (myToken !== countdownToken) return;
+              clearTimeout(safety);
+              pendingDeferCleanup = null;
+              startVideoSyncCountdown();
+            };
+            const onTimeout = () => {
+              if (myToken !== countdownToken) return;
+              video.removeEventListener("loadedmetadata", onMeta);
+              pendingDeferCleanup = null;
+              console.warn(
+                "[slideshow] video metadata not ready within " +
+                  SYNC_METADATA_TIMEOUT_MS +
+                  "ms; falling back to timer-driven countdown",
+              );
+              startTimerCountdown();
+            };
+            pendingDeferCleanup = () => {
+              video.removeEventListener("loadedmetadata", onMeta);
+              clearTimeout(safety);
+            };
+            video.addEventListener("loadedmetadata", onMeta);
+            safety = setTimeout(onTimeout, SYNC_METADATA_TIMEOUT_MS);
+            return;
+          }
+
+          // Seed the ring from the video's current position so re-entering
+          // sync mode mid-playback (e.g. on visibilitychange un-hide, or
+          // after the metadata defer resolved) doesn't snap the ring to 0
+          // for one frame before the first rAF tick.
+          setRingProgress(video.currentTime / dur);
+
+          const onEnded = () => {
+            if (myToken !== countdownToken) return;
+            nextSlide();
+          };
+          video.addEventListener("ended", onEnded);
+          endedTarget = video;
+          endedListener = onEnded;
+
+          const tick = () => {
+            if (myToken !== countdownToken) return;
+            const d = video.duration;
+            if (Number.isFinite(d) && d > 0) {
+              setRingProgress(video.currentTime / d);
+            }
+            if (video.ended) {
+              countdownRAF = null;
+              return; // onEnded handles the advance
+            }
+            countdownRAF = requestAnimationFrame(tick);
           };
           countdownRAF = requestAnimationFrame(tick);
         };
@@ -896,8 +1025,15 @@
                 try {
                   v.currentTime = 0;
                 } catch (_) {}
-                const p = v.play();
-                if (p && p.catch) p.catch(() => {}); // muted + playsinline → autoplay should work
+                // Sync-mode videos are tied to the slideshow's pause state
+                // — if paused when entering, don't start playback. Resume
+                // will play it when the user un-pauses. Non-sync videos
+                // play regardless (existing behaviour: they loop in the
+                // background while the ring is frozen).
+                if (!isPaused || !syncWithVideo[i]) {
+                  const p = v.play();
+                  if (p && p.catch) p.catch(() => {}); // muted + playsinline → autoplay should work
+                }
               } else {
                 try {
                   v.pause();
@@ -926,9 +1062,23 @@
         // Pause / resume
         const setPaused = (paused) => {
           isPaused = !!paused;
+          // On sync-mode video slides, the pause button also pauses the
+          // video so currentTime stops moving (which is what freezes the
+          // ring — the rAF poll reads currentTime). Resume plays the
+          // video again from the paused position. Non-sync videos are
+          // unaffected: they keep looping in the background while paused,
+          // matching existing behaviour.
+          const v = mediaEls[current];
+          const isSyncVideo =
+            syncWithVideo[current] && v && v.tagName === "VIDEO";
           if (isPaused) {
             // Freeze ring at its current position
             stopCountdown();
+            if (isSyncVideo) {
+              try {
+                v.pause();
+              } catch (_) {}
+            }
             pauseBtn.setAttribute("aria-pressed", "true");
             pauseBtn.setAttribute("aria-label", "Resume auto-advance");
             iconPause.style.display = "none";
@@ -945,6 +1095,10 @@
             if (pauseResumeTimer) {
               clearTimeout(pauseResumeTimer);
               pauseResumeTimer = null;
+            }
+            if (isSyncVideo) {
+              const p = v.play();
+              if (p && p.catch) p.catch(() => {});
             }
             // Spec: after pause expires (or manual unpause), countdown starts over
             startCountdown();

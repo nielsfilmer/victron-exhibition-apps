@@ -400,6 +400,42 @@ The Victron design system file (referenced earlier in the build) is
   indefinitely until manual navigation" — same semantics as the global.
   The value is captured into `currentMs` at countdown start so a
   mid-flight slide-config change can't drift the in-progress ring.
+- **Per-slide `syncProgressWithVideo`** — video slides only, opt-in
+  boolean. When `true`, the slide is bound to the video's playback:
+  the countdown ring fraction = `video.currentTime / video.duration`
+  (polled via `requestAnimationFrame`, not the `timeupdate` event —
+  too coarse to look smooth), the slide advances on the video's
+  natural `ended` event (no timer), and the pause button pauses /
+  resumes the video together with the ring. Implementation details:
+  - **`loop` is forced to `false`** on these slides regardless of
+    `s.loop`, because `ended` never fires while the video is
+    looping. This is the only place the kiosk silently overrides a
+    config value; documented in the config.js header.
+  - **`autoAdvanceMs` is ignored** on these slides — playback duration
+    drives the slide. If both are set, a one-line `console.warn` fires
+    at boot so the misconfiguration is debuggable from DevTools.
+  - **Metadata-not-yet-loaded** at slide-enter: defers ring start via
+    a one-shot `loadedmetadata` listener, with a 1000 ms safety net
+    (`SYNC_METADATA_TIMEOUT_MS`) that falls back to the timer-driven
+    path if metadata never loads. The fallback goes through
+    `effectiveAutoAdvanceMs(current)` — slide's own `autoAdvanceMs`
+    if set, otherwise the global default. On cold boot the ring may
+    briefly sit empty before the video starts.
+  - **Rapid-navigation safety:** `startCountdown()` captures a
+    `countdownToken` integer that `stopCountdown()` increments;
+    in-flight rAF ticks, `ended` listeners, and the deferred
+    `loadedmetadata` callback all bail if their captured token no
+    longer matches. Otherwise a Next-press during the metadata-defer
+    window could later fire on a different slide.
+  - **Pause interaction:** `renderSlide()` gates the play call on
+    `!isPaused || !syncWithVideo[i]` so navigating into a sync-mode
+    slide while paused doesn't start playback. `setPaused()` calls
+    `video.pause()` / `video.play()` symmetrically on the current
+    sync-mode slide. Non-sync videos are unaffected — they keep
+    looping in the background while paused, as before.
+  - **`pauseMinutes` auto-resume** restarts the video from the
+    paused position (not from 0). Symmetric with the slideshow's
+    pause-and-resume.
 - **`controlsAlign` global config** — `"left"` (default) or `"right"`.
   JS reads it once at boot and adds `body.controls-right` when set to
   `"right"`. CSS swaps the `left`/`right` anchor on `#controls` via the
