@@ -1,791 +1,1034 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Victron Slideshow Kiosk</title>
-<style>
-  /* Self-hosted Museo Sans 700 — kiosk runs fully offline, no network calls */
-  @font-face {
-    font-family: "museo-sans";
-    src: url("fonts/museosans-700.ttf") format("truetype");
-    font-weight: 700;
-    font-style: normal;
-    font-display: block;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Victron Slideshow Kiosk</title>
+    <style>
+      /* Self-hosted Museo Sans 700 — kiosk runs fully offline, no network calls */
+      @font-face {
+        font-family: "museo-sans";
+        src: url("fonts/museosans-700.ttf") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+        font-display: block;
+      }
 
-  /* ===========================================================
+      /* ===========================================================
      Design tokens — matches Figma 6428:12910 (1920×1080 base)
      =========================================================== */
-  :root {
-    /* Colors (Victron design system) */
-    --black:            #000000;
-    --primary-600:      #005fbe;   /* Victron Blue */
-    --white:            #ffffff;
-    --white-80:         rgba(255, 255, 255, 0.8);
-    --btn-border:       rgba(0, 0, 0, 0.16);   /* dark/16% */
+      :root {
+        /* Colors (Victron design system) */
+        --black: #000000;
+        --primary-600: #005fbe; /* Victron Blue */
+        --white: #ffffff;
+        --white-80: rgba(255, 255, 255, 0.8);
+        --btn-border: rgba(0, 0, 0, 0.16); /* dark/16% */
 
-    /* Typography — `museo-sans` is the Typekit family name (see <link> in <head>) */
-    --font-headers:     "museo-sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-body:        "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+        /* Typography — `museo-sans` is the Typekit family name (see <link> in <head>) */
+        --font-headers:
+          "museo-sans", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-body:
+          "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+          sans-serif;
 
-    /* Layout (vw-scaled from 1920 design width — works on 1080p and 4K) */
-    --pad-edge:         2.5vw;       /* 48px @ 1920w */
-    --btn-size:         5vw;         /* 96px @ 1920w */
-    --gap-controls:     1.667vw;     /* 32px @ 1920w */
-    --gap-title-body:   2.083vw;     /* 40px @ 1920w */
-    --text-panel-w:     23.073vw;    /* 443px @ 1920w */
-    --text-panel-top:   12.604vw;    /* 242px @ 1920w */
+        /* Layout (vw-scaled from 1920 design width — works on 1080p and 4K) */
+        --pad-edge: 2.5vw; /* 48px @ 1920w */
+        --btn-size: 5vw; /* 96px @ 1920w */
+        --gap-controls: 1.667vw; /* 32px @ 1920w */
+        --gap-title-body: 2.083vw; /* 40px @ 1920w */
+        --text-panel-w: 23.073vw; /* 443px @ 1920w */
+        --text-panel-top: 12.604vw; /* 242px @ 1920w */
 
-    /* Small-image frame size — Figma 6437:465's 1204×815 box. */
-    --img-w:            62.694vw;    /* 1203.72px @ 1920w */
-    --img-h:            42.337vw;    /* 814.88px @ 1920w */
+        /* Small-image frame size — Figma 6437:465's 1204×815 box. */
+        --img-w: 62.694vw; /* 1203.72px @ 1920w */
+        --img-h: 42.337vw; /* 814.88px @ 1920w */
 
-    /* Vertical zone reserved at the bottom for the controls cluster:
+        /* Vertical zone reserved at the bottom for the controls cluster:
        pad-edge (bottom inset) + btn-size (button height) = 7.5vw @1920w.
        Used by the small-image variants to centre the image in the space
        above the controls. */
-    --controls-zone:    calc(var(--pad-edge) + var(--btn-size));
+        --controls-zone: calc(var(--pad-edge) + var(--btn-size));
 
-    --transition-ms:    700ms;
-    --ease:             cubic-bezier(0.22, 0.61, 0.36, 1);
-  }
+        --transition-ms: 700ms;
+        --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+      }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-  html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    background: var(--black);
-    color: var(--white);
-    font-family: var(--font-body);
-    touch-action: none;
-  }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--black);
+        color: var(--white);
+        font-family: var(--font-body);
+        touch-action: none;
+      }
 
-  /* Hide the mouse cursor everywhere in the kiosk. Universal `*` rule
+      /* Hide the mouse cursor everywhere in the kiosk. Universal `*` rule
      beats the user-agent stylesheet's `cursor: pointer` default on
      `<button>`, so no per-element override is needed. When
      `debug: true` is set in config.js, JS adds `body.debug`
      and the rule below restores native cursors for testing without
      a touchscreen. Class name matches App 2's existing convention so
      future debug toggles can hang off the same class in both apps. */
-  *, *::before, *::after { cursor: none; }
-  body.debug,
-  body.debug *,
-  body.debug *::before,
-  body.debug *::after { cursor: auto; }
+      *,
+      *::before,
+      *::after {
+        cursor: none;
+      }
+      body.debug,
+      body.debug *,
+      body.debug *::before,
+      body.debug *::after {
+        cursor: auto;
+      }
 
-  /* Hard guarantee: nothing is ever selectable, draggable, or context-menu-able */
-  body, body * {
-    -webkit-user-select: none !important;
-    -moz-user-select:    none !important;
-    -ms-user-select:     none !important;
-    user-select:         none !important;
-    -webkit-user-drag:   none;
-    -webkit-touch-callout: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  img, video { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
+      /* Hard guarantee: nothing is ever selectable, draggable, or context-menu-able */
+      body,
+      body * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-user-drag: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      img,
+      video {
+        -webkit-user-drag: none;
+        user-drag: none;
+        pointer-events: none;
+      }
 
-  #stage {
-    position: fixed; inset: 0;
-    overflow: hidden;
-  }
+      #stage {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+      }
 
-  /* ===========================================================
+      /* ===========================================================
      Sinus background pattern — Figma asset 6428:12911
      Hidden via opacity when the current slide is the fullscreen variant.
      =========================================================== */
-  #sinus-bg {
-    position: absolute;
-    /* Figma inset: top 29.63%, left -207.92%, right -176.38%, bottom -68.48% */
-    top: 29.63%;
-    left: -207.92%;
-    right: -176.38%;
-    bottom: -68.48%;
-    pointer-events: none;
-    z-index: 0;
-    transition: opacity var(--transition-ms) var(--ease);
-  }
-  #sinus-bg img {
-    width: 100%; height: 100%; display: block;
-    /* Opacity (0.6 group + per-path 0.2..0.6) is baked into the SVG file itself */
-  }
-  body.fullscreen-current #sinus-bg { opacity: 0; }
+      #sinus-bg {
+        position: absolute;
+        /* Figma inset: top 29.63%, left -207.92%, right -176.38%, bottom -68.48% */
+        top: 29.63%;
+        left: -207.92%;
+        right: -176.38%;
+        bottom: -68.48%;
+        pointer-events: none;
+        z-index: 0;
+        transition: opacity var(--transition-ms) var(--ease);
+      }
+      #sinus-bg img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        /* Opacity (0.6 group + per-path 0.2..0.6) is baked into the SVG file itself */
+      }
+      body.fullscreen-current #sinus-bg {
+        opacity: 0;
+      }
 
-  /* ===========================================================
+      /* ===========================================================
      Slides — each slide is a full-stage container. Image and text
      inside are positioned per variant. Only one slide is `.is-current`
      at a time; the image and text entry animations live on inner
      elements (so all variants crossfade cleanly).
      =========================================================== */
-  #slides {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-  }
-  .slide {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
+      #slides {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+      }
+      .slide {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
 
-  .slide-img-frame {
-    position: absolute;
-    overflow: hidden;
-  }
-  .slide-img {
-    width: 100%; height: 100%;
-    /* Default: `cover` — image fills the frame, cropping if needed.
+      .slide-img-frame {
+        position: absolute;
+        overflow: hidden;
+      }
+      .slide-img {
+        width: 100%;
+        height: 100%;
+        /* Default: `cover` — image fills the frame, cropping if needed.
        Used by `large-image` (where the frame is sized to dominate the
        layout) and `fullscreen` (where the frame is the whole viewport).
        The small-image variants override below to `contain` so source
        images are never cropped. */
-    object-fit: cover;
-    /* `<video>` has a black UA-default background that shows through the
+        object-fit: cover;
+        /* `<video>` has a black UA-default background that shows through the
        letterbox bars when the video's aspect doesn't match the frame.
        Forcing transparent makes the bars consistent with `<img>` — the
        sinus pattern behind the frame shows through. */
-    background: transparent;
-    display: block;
-    opacity: 0;
-    transform: scale(1.02);
-    transition:
-      opacity var(--transition-ms) var(--ease),
-      transform calc(var(--transition-ms) + 200ms) var(--ease);
-    will-change: opacity, transform;
-  }
-  .slide.is-current .slide-img { opacity: 1; transform: scale(1); }
-  /* Small-image variants letterbox rather than crop, so the sinus pattern
+        background: transparent;
+        display: block;
+        opacity: 0;
+        transform: scale(1.02);
+        transition:
+          opacity var(--transition-ms) var(--ease),
+          transform calc(var(--transition-ms) + 200ms) var(--ease);
+        will-change: opacity, transform;
+      }
+      .slide.is-current .slide-img {
+        opacity: 1;
+        transform: scale(1);
+      }
+      /* Small-image variants letterbox rather than crop, so the sinus pattern
      shows through where the image doesn't fill the frame. */
-  .slide.variant-default    .slide-img,
-  .slide.variant-text-right .slide-img { object-fit: contain; }
+      .slide.variant-default .slide-img,
+      .slide.variant-text-right .slide-img {
+        object-fit: contain;
+      }
 
-  .slide-text {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gap-title-body);
-    /* Opacity handled per-element inside (line-staggered title + body fade) */
-  }
+      .slide-text {
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap-title-body);
+        /* Opacity handled per-element inside (line-staggered title + body fade) */
+      }
 
-  /* ----- Variant: default — image right, text left.
+      /* ----- Variant: default — image right, text left.
            Image-frame size from Figma 6437:465 (1204×815) anchored 47px
            from the right edge. The frame is centred vertically in the
            space ABOVE the controls cluster — so the gap above the image
            equals the gap below it (between image bottom and controls top).
            The image inside uses `object-fit: contain` so it isn't
            cropped. ----- */
-  .slide.variant-default .slide-img-frame {
-    right: 2.448vw;                /* 47px @ 1920w (mirror of text-right) */
-    top:   calc((100vh - var(--controls-zone) - var(--img-h)) / 2);
-    width:  var(--img-w);          /* 1204px @ 1920w */
-    height: var(--img-h);          /* 815px @ 1920w */
-  }
-  .slide.variant-default .slide-text {
-    position: absolute;
-    left: var(--pad-edge);
-    top: var(--text-panel-top);
-    width: var(--text-panel-w);
-    z-index: 2;
-  }
+      .slide.variant-default .slide-img-frame {
+        right: 2.448vw; /* 47px @ 1920w (mirror of text-right) */
+        top: calc((100vh - var(--controls-zone) - var(--img-h)) / 2);
+        width: var(--img-w); /* 1204px @ 1920w */
+        height: var(--img-h); /* 815px @ 1920w */
+      }
+      .slide.variant-default .slide-text {
+        position: absolute;
+        left: var(--pad-edge);
+        top: var(--text-panel-top);
+        width: var(--text-panel-w);
+        z-index: 2;
+      }
 
-  /* ----- Variant: large-image — image fills more of screen with sharp corners.
+      /* ----- Variant: large-image — image fills more of screen with sharp corners.
            Figma 6428:13078 specifies a 24px corner radius; the kiosk variant
            drops it per stakeholder direction. By default the image is flushed
            to the right edge; when the controls cluster is on the right
            (`controlsAlign: "right"` → `body.controls-right`) the image flips
            to the left edge so the controls don't sit on top of it. ----- */
-  .slide.variant-large-image .slide-img-frame {
-    right: 2.344vw;                /* 45px @ 1920w */
-    left: auto;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 68.125vw;               /* 1308px @ 1920w */
-    height: 49.74vw;               /* 955px @ 1920w */
-  }
-  body.controls-right .slide.variant-large-image .slide-img-frame {
-    right: auto;
-    left: 2.344vw;
-  }
-  /* When the image flips left, the text panel must flip right too — otherwise
+      .slide.variant-large-image .slide-img-frame {
+        right: 2.344vw; /* 45px @ 1920w */
+        left: auto;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 68.125vw; /* 1308px @ 1920w */
+        height: 49.74vw; /* 955px @ 1920w */
+      }
+      body.controls-right .slide.variant-large-image .slide-img-frame {
+        right: auto;
+        left: 2.344vw;
+      }
+      /* When the image flips left, the text panel must flip right too — otherwise
      it sits on top of the image (which spans ~2.3vw → 70.5vw at the design
      width). Other variants don't need this: variant-default keeps image right
      + text left even with controls-right; variant-text-right already anchors
      text on the right; variant-fullscreen has no text. */
-  body.controls-right .slide.variant-large-image .slide-text {
-    left: auto;
-    right: var(--pad-edge);
-  }
-  .slide.variant-large-image .slide-text {
-    position: absolute;
-    left: var(--pad-edge);
-    top: var(--text-panel-top);
-    width: var(--text-panel-w);
-    z-index: 2;
-  }
+      body.controls-right .slide.variant-large-image .slide-text {
+        left: auto;
+        right: var(--pad-edge);
+      }
+      .slide.variant-large-image .slide-text {
+        position: absolute;
+        left: var(--pad-edge);
+        top: var(--text-panel-top);
+        width: var(--text-panel-w);
+        z-index: 2;
+      }
 
-  /* ----- Variant: text-right — image left, text right.
+      /* ----- Variant: text-right — image left, text right.
            Same image-frame box and vertical centring rule as `default`,
            just anchored to the left edge. ----- */
-  .slide.variant-text-right .slide-img-frame {
-    left: 2.448vw;                 /* 47px @ 1920w (Figma 6437:465) */
-    top:  calc((100vh - var(--controls-zone) - var(--img-h)) / 2);
-    width:  var(--img-w);          /* 1204px @ 1920w */
-    height: var(--img-h);          /* 815px @ 1920w */
-  }
-  .slide.variant-text-right .slide-text {
-    position: absolute;
-    left: 71.25vw;                 /* 1368px @ 1920w */
-    top: var(--text-panel-top);
-    width: var(--text-panel-w);
-    z-index: 2;
-  }
+      .slide.variant-text-right .slide-img-frame {
+        left: 2.448vw; /* 47px @ 1920w (Figma 6437:465) */
+        top: calc((100vh - var(--controls-zone) - var(--img-h)) / 2);
+        width: var(--img-w); /* 1204px @ 1920w */
+        height: var(--img-h); /* 815px @ 1920w */
+      }
+      .slide.variant-text-right .slide-text {
+        position: absolute;
+        left: 71.25vw; /* 1368px @ 1920w */
+        top: var(--text-panel-top);
+        width: var(--text-panel-w);
+        z-index: 2;
+      }
 
-  /* ----- Variant: fullscreen — image fills entire screen, no text, no sinus ----- */
-  .slide.variant-fullscreen .slide-img-frame {
-    inset: 0;
-  }
-  .slide.variant-fullscreen .slide-text { display: none; }
+      /* ----- Variant: fullscreen — image fills entire screen, no text, no sinus ----- */
+      .slide.variant-fullscreen .slide-img-frame {
+        inset: 0;
+      }
+      .slide.variant-fullscreen .slide-text {
+        display: none;
+      }
 
-  .slide-text .title {
-    font-family: var(--font-headers);
-    font-weight: 700;
-    font-size: 2.292vw;                       /* 44px @ 1920w → 88px @ 4K */
-    line-height: 1;
-    letter-spacing: -0.03em;                  /* -1.32px @ 44px */
-    color: var(--white);
-  }
-  .slide-text .title .rest { color: var(--white-80); }
+      .slide-text .title {
+        font-family: var(--font-headers);
+        font-weight: 700;
+        font-size: 2.292vw; /* 44px @ 1920w → 88px @ 4K */
+        line-height: 1;
+        letter-spacing: -0.03em; /* -1.32px @ 44px */
+        color: var(--white);
+      }
+      .slide-text .title .rest {
+        color: var(--white-80);
+      }
 
-  .slide-text .body {
-    font-family: var(--font-body);
-    font-weight: 400;
-    font-size: 1.25vw;                        /* 24px @ 1920w → 48px @ 4K */
-    line-height: 1.5;
-    color: var(--white);
-  }
+      .slide-text .body {
+        font-family: var(--font-body);
+        font-weight: 400;
+        font-size: 1.25vw; /* 24px @ 1920w → 48px @ 4K */
+        line-height: 1.5;
+        color: var(--white);
+      }
 
-  /* ===========================================================
+      /* ===========================================================
      Entry animation — title types in line-by-line, then body fades in
      =========================================================== */
-  .slide-text .word,
-  .slide-text .body {
-    opacity: 0;
-    transform: translateY(0.4em);
-    transition:
-      opacity 380ms var(--ease),
-      transform 380ms var(--ease);
-    transition-delay: 0s;                     /* exit: instant for all */
-    --delay: 0s;
-  }
-  .slide-text .word {
-    display: inline-block;                    /* needed for transform */
-    white-space: pre;                         /* preserve any trailing space */
-  }
-  .slide.is-current .slide-text .word,
-  .slide.is-current .slide-text .body {
-    opacity: 1;
-    transform: translateY(0);
-    transition-delay: var(--delay);           /* entry: staggered per line */
-  }
+      .slide-text .word,
+      .slide-text .body {
+        opacity: 0;
+        transform: translateY(0.4em);
+        transition:
+          opacity 380ms var(--ease),
+          transform 380ms var(--ease);
+        transition-delay: 0s; /* exit: instant for all */
+        --delay: 0s;
+      }
+      .slide-text .word {
+        display: inline-block; /* needed for transform */
+        white-space: pre; /* preserve any trailing space */
+      }
+      .slide.is-current .slide-text .word,
+      .slide.is-current .slide-text .body {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: var(--delay); /* entry: staggered per line */
+      }
 
-  /* ===========================================================
+      /* ===========================================================
      Controls cluster: back, "X / Y", next+ring, pause.
      Defaults to bottom-left; flip with `controlsAlign: "right"` in config.
      Cluster order (back → pagination → next → pause) is preserved either way.
      =========================================================== */
-  #controls {
-    position: absolute;
-    left: var(--pad-edge);
-    right: auto;
-    bottom: var(--pad-edge);
-    display: flex;
-    align-items: center;
-    gap: var(--gap-controls);
-    z-index: 3;
-  }
-  body.controls-right #controls {
-    left: auto;
-    right: var(--pad-edge);
-  }
+      #controls {
+        position: absolute;
+        left: var(--pad-edge);
+        right: auto;
+        bottom: var(--pad-edge);
+        display: flex;
+        align-items: center;
+        gap: var(--gap-controls);
+        z-index: 3;
+      }
+      body.controls-right #controls {
+        left: auto;
+        right: var(--pad-edge);
+      }
 
-  .ctrl-btn {
-    position: relative;                            /* positioning context for inner countdown ring */
-    width: var(--btn-size);
-    height: var(--btn-size);
-    border-radius: 100px;
-    background: var(--primary-600);
-    border: 1px solid var(--btn-border);
-    color: var(--white);
-    display: flex; align-items: center; justify-content: center;
-    padding: 0;
-    transition: transform 120ms var(--ease), filter 200ms var(--ease);
-  }
-  .ctrl-btn:active { transform: scale(0.95); filter: brightness(0.9); }
-  /* The 40px-in-96px icon sizing applies only to in-button icons, not to the
+      .ctrl-btn {
+        position: relative; /* positioning context for inner countdown ring */
+        width: var(--btn-size);
+        height: var(--btn-size);
+        border-radius: 100px;
+        background: var(--primary-600);
+        border: 1px solid var(--btn-border);
+        color: var(--white);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition:
+          transform 120ms var(--ease),
+          filter 200ms var(--ease);
+      }
+      .ctrl-btn:active {
+        transform: scale(0.95);
+        filter: brightness(0.9);
+      }
+      /* The 40px-in-96px icon sizing applies only to in-button icons, not to the
      countdown ring (which is full-button-sized). */
-  .ctrl-btn > svg:not(#countdown-ring) { width: 41.67%; height: 41.67%; display: block; }
+      .ctrl-btn > svg:not(#countdown-ring) {
+        width: 41.67%;
+        height: 41.67%;
+        display: block;
+      }
 
-  /* Pagination text */
-  #pagination {
-    font-family: var(--font-body);
-    font-weight: 500;
-    font-size: 1.458vw;                       /* 28px @ 1920w → 56px @ 4K */
-    line-height: 1.2;
-    color: var(--white);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
+      /* Pagination text */
+      #pagination {
+        font-family: var(--font-body);
+        font-weight: 500;
+        font-size: 1.458vw; /* 28px @ 1920w → 56px @ 4K */
+        line-height: 1.2;
+        color: var(--white);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
 
-  /* NEXT button + countdown ring (no permanent track — only the progress arc).
+      /* NEXT button + countdown ring (no permanent track — only the progress arc).
      The ring lives *inside* the button so it inherits the button's `:active`
      scale animation (and paints on top of the blue, which siblings wouldn't). */
-  #next-wrap {
-    flex-shrink: 0;
-  }
-  /* Countdown ring sits ENTIRELY inside the button, with its outer edge flush
+      #next-wrap {
+        flex-shrink: 0;
+      }
+      /* Countdown ring sits ENTIRELY inside the button, with its outer edge flush
      against the button's outer edge. The SVG box is extended by 1px on every
      side via `inset: -1px` so it covers the button's 1px border (otherwise
      `position: absolute; inset: 0` would anchor to the padding edge — the
      inside of the border — leaving a 1px blue rim outside the white stroke). */
-  #countdown-ring {
-    position: absolute;
-    inset: -1px;                   /* covers the 1px button border */
-    pointer-events: none;
-    transform: rotate(-90deg);
-  }
-  #countdown-ring .progress {
-    fill: none;
-    stroke: var(--white);
-    stroke-width: 5;
-    stroke-linecap: round;
-  }
+      #countdown-ring {
+        position: absolute;
+        inset: -1px; /* covers the 1px button border */
+        pointer-events: none;
+        transform: rotate(-90deg);
+      }
+      #countdown-ring .progress {
+        fill: none;
+        stroke: var(--white);
+        stroke-width: 5;
+        stroke-linecap: round;
+      }
 
-  /* Error fallback */
-  #error {
-    position: fixed; inset: 0;
-    display: none;
-    align-items: center; justify-content: center;
-    background: var(--primary-600);
-    padding: 5vw;
-    font-family: var(--font-body);
-    font-size: 1.6vw;
-    text-align: center; line-height: 1.6;
-    color: var(--white);
-    z-index: 9999;
-  }
-  body.error #error { display: flex; }
-</style>
-</head>
-<body>
-  <div id="stage">
-    <!-- 1. Sinus background pattern (full 12-wave SVG from Figma) -->
-    <div id="sinus-bg" aria-hidden="true">
-      <img src="media/sinus-bg.svg" alt="">
-    </div>
-
-    <!-- 2. Slides — each slide carries its own variant class that positions
-              the image and text differently. -->
-    <div id="slides"></div>
-
-    <!-- 4. Controls cluster (bottom-left) -->
-    <div id="controls">
-      <button class="ctrl-btn" id="back-btn" aria-label="Previous slide">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="20" y1="12" x2="4" y2="12"/>
-          <polyline points="11 19 4 12 11 5"/>
-        </svg>
-      </button>
-
-      <div id="pagination" aria-live="polite">
-        <span class="current">1</span> / <span class="total">5</span>
+      /* Error fallback */
+      #error {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-600);
+        padding: 5vw;
+        font-family: var(--font-body);
+        font-size: 1.6vw;
+        text-align: center;
+        line-height: 1.6;
+        color: var(--white);
+        z-index: 9999;
+      }
+      body.error #error {
+        display: flex;
+      }
+    </style>
+    <script>
+      // Version bootstrap. App 1 ships in three content-specific versions
+      // (ESS / OL / Microgrid); the ?version= URL parameter picks which one.
+      // Each version lives in app1-slideshow/versions/<name>/ with its own
+      // config.js + media/. The shared code (index.html, fonts/) and the
+      // install/launch scripts (.command files + LaunchAgent plists) are
+      // version-agnostic — only this bootstrap and the in-page renderer
+      // know about versions.
+      //
+      // Loads the version's config.js via a dynamic <script> element
+      // appended to <head>, exposing window.__appConfigReady as a Promise
+      // that resolves once the config script has loaded (or 404'd). The
+      // main IIFE at the bottom of <body> is `async` and awaits this
+      // Promise before reading window.APP_CONFIG. document.write was tried
+      // first; Chrome blocks document.write-inserted scripts on file://
+      // with "(blocked:origin)" because each file:// URL is a unique
+      // origin in modern Chrome, and a document.write-written <script src>
+      // fails the same-origin check that a parser-inserted <script src>
+      // would pass. The dynamic-script-element path doesn't trigger the
+      // same check and works reliably in the kiosk environment.
+      (function () {
+        const VALID = ["ess", "ol", "microgrid"];
+        const params = new URLSearchParams(location.search);
+        const v = params.get("version");
+        if (!v || !VALID.includes(v)) {
+          // Defer error rendering — <body> isn't parsed yet. The IIFE at
+          // the bottom of <body> reads this flag and renders the message
+          // via the existing #error overlay. Pre-resolve the Promise so
+          // the async IIFE doesn't hang waiting for a script that won't
+          // load.
+          window.__appBootError = "no-version";
+          window.__appConfigReady = Promise.resolve();
+          return;
+        }
+        window.APP_VERSION = v;
+        window.__appConfigReady = new Promise(function (resolve) {
+          const s = document.createElement("script");
+          s.src = "versions/" + v + "/config.js";
+          // Resolve on load AND on error — a config-script 404 falls
+          // through to the existing `if (!cfg)` check inside the IIFE,
+          // which renders the generic "config.js did not set
+          // window.APP_CONFIG" overlay. Resolving on error keeps the
+          // `await` from hanging so the error path actually fires.
+          s.onload = function () {
+            resolve();
+          };
+          s.onerror = function () {
+            resolve();
+          };
+          document.head.appendChild(s);
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="stage">
+      <!-- 1. Sinus background pattern (full 12-wave SVG from Figma).
+            `src` is set by the IIFE once window.APP_VERSION is known
+            (versions/<v>/media/sinus-bg.svg). HTML omits `src` so it
+            doesn't 404 if the version bootstrap fails validation. -->
+      <div id="sinus-bg" aria-hidden="true">
+        <img alt="" />
       </div>
 
-      <div id="next-wrap">
-        <button class="ctrl-btn" id="next-btn" aria-label="Next slide">
-          <!-- Countdown ring is nested INSIDE the button so it inherits the
+      <!-- 2. Slides — each slide carries its own variant class that positions
+              the image and text differently. -->
+      <div id="slides"></div>
+
+      <!-- 4. Controls cluster (bottom-left) -->
+      <div id="controls">
+        <button class="ctrl-btn" id="back-btn" aria-label="Previous slide">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="20" y1="12" x2="4" y2="12" />
+            <polyline points="11 19 4 12 11 5" />
+          </svg>
+        </button>
+
+        <div id="pagination" aria-live="polite">
+          <span class="current">1</span> / <span class="total">5</span>
+        </div>
+
+        <div id="next-wrap">
+          <button class="ctrl-btn" id="next-btn" aria-label="Next slide">
+            <!-- Countdown ring is nested INSIDE the button so it inherits the
                button's `:active` scale animation and paints on top of the
                blue fill. r=47.5 with stroke-width=5 fits the stroke entirely
                inside the button: stroke spans SVG r=45..50 (= display
                r=43.2..48 on the 96px button), so its outer edge is flush
                with the button edge. -->
-          <svg id="countdown-ring" viewBox="0 0 100 100" aria-hidden="true">
-            <circle class="progress" cx="50" cy="50" r="47.5"/>
+            <svg id="countdown-ring" viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="progress" cx="50" cy="50" r="47.5" />
+            </svg>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <polyline points="13 5 20 12 13 19" />
+            </svg>
+          </button>
+        </div>
+
+        <button
+          class="ctrl-btn"
+          id="pause-btn"
+          aria-label="Pause auto-advance"
+          aria-pressed="false"
+        >
+          <!-- Pause icon: just two filled bars (no outer circle) -->
+          <svg
+            class="icon-pause"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <rect x="6" y="4" width="4" height="16" rx="1" />
+            <rect x="14" y="4" width="4" height="16" rx="1" />
           </svg>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="4" y1="12" x2="20" y2="12"/>
-            <polyline points="13 5 20 12 13 19"/>
+          <svg
+            class="icon-play"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+            style="display: none"
+          >
+            <polygon points="6,4 20,12 6,20" />
           </svg>
         </button>
       </div>
-
-      <button class="ctrl-btn" id="pause-btn" aria-label="Pause auto-advance" aria-pressed="false">
-        <!-- Pause icon: just two filled bars (no outer circle) -->
-        <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <rect x="6"  y="4" width="4" height="16" rx="1"/>
-          <rect x="14" y="4" width="4" height="16" rx="1"/>
-        </svg>
-        <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none">
-          <polygon points="6,4 20,12 6,20"/>
-        </svg>
-      </button>
     </div>
-  </div>
-  <div id="error"></div>
+    <div id="error"></div>
 
-<script src="config.js"></script>
-<script>
-(function () {
-  const $ = (s) => document.querySelector(s);
-  const stage      = $('#stage');
-  const slidesEl   = $('#slides');
-  const backBtn    = $('#back-btn');
-  const nextBtn    = $('#next-btn');
-  const pauseBtn   = $('#pause-btn');
-  const ringProg   = $('#countdown-ring .progress');
-  const pageCur    = $('#pagination .current');
-  const pageTot    = $('#pagination .total');
-  const errorEl    = $('#error');
-  const iconPause  = pauseBtn.querySelector('.icon-pause');
-  const iconPlay   = pauseBtn.querySelector('.icon-play');
+    <script>
+      (async function () {
+        // The version's config.js is loaded by the bootstrap in <head> as
+        // a dynamic <script> element. window.__appConfigReady is a Promise
+        // that resolves once the script has loaded (or 404'd) — we await
+        // it before reading window.APP_CONFIG. The early version-error
+        // check below runs BEFORE the await so we render the friendly
+        // overlay immediately on a missing/invalid ?version= (in which
+        // case the Promise is already pre-resolved by the bootstrap).
+        const $ = (s) => document.querySelector(s);
+        const stage = $("#stage");
+        const slidesEl = $("#slides");
+        const backBtn = $("#back-btn");
+        const nextBtn = $("#next-btn");
+        const pauseBtn = $("#pause-btn");
+        const ringProg = $("#countdown-ring .progress");
+        const pageCur = $("#pagination .current");
+        const pageTot = $("#pagination .total");
+        const errorEl = $("#error");
+        const iconPause = pauseBtn.querySelector(".icon-pause");
+        const iconPlay = pauseBtn.querySelector(".icon-play");
 
-  const showError = (msg) => {
-    errorEl.textContent = msg;
-    document.body.classList.add('error');
-    console.error(msg);
-  };
+        const showError = (msg) => {
+          errorEl.textContent = msg;
+          document.body.classList.add("error");
+          console.error(msg);
+        };
 
-  const cfg = window.APP_CONFIG;
-  if (!cfg) return showError('config.js did not set window.APP_CONFIG — check the file.');
-
-  const slides        = (cfg.slideshow && cfg.slideshow.images) || [];
-  if (!slides.length) return showError('config.js: slideshow.images is empty');
-
-  // Use `typeof === 'number'` (not `||`) so an explicit 0 is honoured:
-  //   autoAdvanceMs: 0 → countdown disabled (`if (autoAdvanceMs <= 0)` later),
-  //                      i.e. slides stay until manual navigation.
-  // The `||`-based fallback would coerce 0 → 8000 and silently break that.
-  const ss = cfg.slideshow || {};
-  const transitionMs  = (typeof ss.transitionMs  === 'number') ? ss.transitionMs  : 700;
-  const autoAdvanceMs = (typeof ss.autoAdvanceMs === 'number') ? ss.autoAdvanceMs : 8000;
-  const pauseMinutes  = cfg.pauseMinutes != null ? cfg.pauseMinutes : 5;
-  const pauseMs       = Math.max(0, pauseMinutes) * 60 * 1000;
-
-  // Controls cluster alignment — "left" (default) or "right". Anything else
-  // falls back to "left". Applied once at boot via a body class; the
-  // back→pagination→next→pause order is preserved either way.
-  const controlsAlign = cfg.controlsAlign === 'right' ? 'right' : 'left';
-  if (controlsAlign === 'right') document.body.classList.add('controls-right');
-
-  // Debug — restores the native mouse cursor (kiosk normally hides it via
-  // the universal `* { cursor: none }` rule). Useful for developing /
-  // testing without a touchscreen. Must be `true` to enable; any other
-  // value (including missing) keeps the kiosk cursor-free.
-  if (cfg.debug === true) document.body.classList.add('debug');
-
-  document.documentElement.style.setProperty('--transition-ms', transitionMs + 'ms');
-
-  // Build slides
-  const slideContainers = [];
-  const mediaEls  = [];   // each entry is either an <img> or a <video>
-  const textEls = [];
-  const bodyEls = [];
-  const VALID_VARIANTS = new Set(['default', 'large-image', 'text-right', 'fullscreen']);
-  const VIDEO_EXT      = /\.(mp4|webm|ogg|m4v|mov)(\?.*)?$/i;
-
-  // Build title as flat list of word spans (alternating .lead / .rest classes)
-  // so we can stagger them line-by-line later.
-  const buildTitle = (slide) => {
-    const p = document.createElement('p');
-    p.className = 'title';
-
-    const sections = [
-      { text: slide.title,    cls: 'lead' },
-      { text: slide.subtitle, cls: 'rest' }
-    ].filter(s => s.text);
-
-    sections.forEach((sec, secIdx) => {
-      const words = sec.text.trim().split(/\s+/);
-      words.forEach((word, wIdx) => {
-        const span = document.createElement('span');
-        span.className = 'word ' + sec.cls;
-        span.textContent = word;
-        p.appendChild(span);
-        const isFinalWord = (secIdx === sections.length - 1) && (wIdx === words.length - 1);
-        if (!isFinalWord) p.appendChild(document.createTextNode(' '));
-      });
-    });
-    return p;
-  };
-
-  slides.forEach((s, i) => {
-    const variant = VALID_VARIANTS.has(s.variant) ? s.variant : 'default';
-    const slideEl = document.createElement('div');
-    slideEl.className = 'slide variant-' + variant;
-    slideEl.dataset.variant = variant;
-
-    // Media (image OR video) — file extension on `src` decides which.
-    // Videos play on slide-enter and pause on slide-leave (see renderSlide).
-    const imgFrame = document.createElement('div');
-    imgFrame.className = 'slide-img-frame';
-    const isVideo = VIDEO_EXT.test(s.src);
-    let mediaEl;
-    if (isVideo) {
-      mediaEl = document.createElement('video');
-      mediaEl.className = 'slide-img';        // shares all the .slide-img CSS (object-fit, opacity, scale entry)
-      mediaEl.src = s.src;
-      mediaEl.muted = true;                   // required for autoplay; kiosk runs silent anyway
-      mediaEl.playsInline = true;
-      mediaEl.loop = s.loop !== false;        // loop by default; pass `loop: false` per slide to disable
-      // `metadata` keeps memory footprint low when many videos are configured —
-      // only metadata is loaded ahead of time, full data streams when play() is called.
-      mediaEl.preload = 'metadata';
-      mediaEl.draggable = false;
-      mediaEl.setAttribute('aria-label', s.title || ('Slide ' + (i + 1)));
-      mediaEl.addEventListener('error',
-        () => console.warn('[slideshow] video failed to load:', s.src));
-    } else {
-      mediaEl = document.createElement('img');
-      mediaEl.className = 'slide-img';
-      mediaEl.src = s.src;
-      mediaEl.alt = s.title || ('Slide ' + (i + 1));
-      mediaEl.draggable = false;
-      mediaEl.loading = i === 0 ? 'eager' : 'lazy';
-      mediaEl.decoding = 'async';
-    }
-    imgFrame.appendChild(mediaEl);
-    slideEl.appendChild(imgFrame);
-    mediaEls.push(mediaEl);
-
-    // Text — skipped entirely for the fullscreen variant
-    let bodyEl = null;
-    let textBlock = null;
-    if (variant !== 'fullscreen' && (s.title || s.subtitle || s.body)) {
-      textBlock = document.createElement('div');
-      textBlock.className = 'slide-text';
-      if (s.title || s.subtitle) textBlock.appendChild(buildTitle(s));
-      if (s.body) {
-        bodyEl = document.createElement('p');
-        bodyEl.className = 'body';
-        bodyEl.textContent = s.body;
-        textBlock.appendChild(bodyEl);
-      }
-      slideEl.appendChild(textBlock);
-    }
-    bodyEls.push(bodyEl);
-    textEls.push(textBlock);            // null for fullscreen variants
-
-    slidesEl.appendChild(slideEl);
-    slideContainers.push(slideEl);
-  });
-
-  pageTot.textContent = String(slides.length);
-
-  // Once fonts have loaded and layout has settled, measure each title's wrapped
-  // line positions and assign --delay per word so each line animates as a unit,
-  // followed by the body block once the LAST line has fully animated in.
-  const LINE_STAGGER_MS = 120;     // snappier per-line cadence
-  const TRANSITION_MS   = 380;     // matches the CSS transition duration on .word/.body
-  const computeStagger = () => {
-    textEls.forEach((textEl, i) => {
-      if (!textEl) return;              // fullscreen variant — no text to stagger
-      const wordSpans = Array.from(textEl.querySelectorAll('.word'));
-      if (!wordSpans.length) return;
-
-      // Group words by their rendered y position (= line index)
-      const lineMap = new Map();
-      wordSpans.forEach(span => {
-        const y = Math.round(span.getBoundingClientRect().top);
-        if (!lineMap.has(y)) lineMap.set(y, []);
-        lineMap.get(y).push(span);
-      });
-      const lines = [...lineMap.entries()].sort((a, b) => a[0] - b[0]);
-
-      lines.forEach(([_, spans], lineIdx) => {
-        const delay = lineIdx * LINE_STAGGER_MS;
-        spans.forEach(span => span.style.setProperty('--delay', delay + 'ms'));
-      });
-
-      // Body waits until the LAST line has finished animating:
-      //   last line starts at (n-1) * stagger, finishes (n-1) * stagger + transition.
-      if (bodyEls[i]) {
-        const lastLineStart = Math.max(0, lines.length - 1) * LINE_STAGGER_MS;
-        bodyEls[i].style.setProperty('--delay', (lastLineStart + TRANSITION_MS) + 'ms');
-      }
-    });
-  };
-
-  // Boot path: wait for fonts before measuring lines and showing slide 0 so the
-  // very first slide also gets the line-by-line stagger (rather than landing
-  // before fonts.ready and losing the effect on initial load).
-
-  // Countdown ring — only the progress arc (no permanent track).
-  // RING_R must match the <circle r="…"> in the markup; otherwise the dasharray
-  // won't fully cover the path at start and a small arc is visible at f=0.
-  const RING_R = 47.5;
-  const RING_C = 2 * Math.PI * RING_R;
-  ringProg.style.strokeDasharray  = RING_C;
-  ringProg.style.strokeDashoffset = RING_C;       // start: empty (ring "fills" as time elapses)
-
-  let countdownStart = 0;
-  let countdownRAF   = null;
-  let pauseResumeTimer = null;
-  let isPaused = false;
-
-  const setRingProgress = (fraction) => {
-    const f = Math.min(1, Math.max(0, fraction));
-    ringProg.style.strokeDashoffset = String(RING_C * (1 - f));
-  };
-
-  const stopCountdown = () => {
-    if (countdownRAF) { cancelAnimationFrame(countdownRAF); countdownRAF = null; }
-  };
-
-  // Per-slide auto-advance — each slide may set its own `autoAdvanceMs` to
-  // override the global default. Non-numeric values fall back to the global.
-  // 0 (or negative) means "stay on this slide indefinitely until the user
-  // navigates manually", matching the global semantics.
-  const effectiveAutoAdvanceMs = (i) => {
-    const s = slides[i];
-    return (s && typeof s.autoAdvanceMs === 'number') ? s.autoAdvanceMs : autoAdvanceMs;
-  };
-
-  let currentMs = 0;               // duration of the in-flight countdown; set at startCountdown()
-
-  const startCountdown = () => {
-    stopCountdown();
-    currentMs = effectiveAutoAdvanceMs(current);
-    if (currentMs <= 0 || isPaused) return;
-    countdownStart = performance.now();
-    setRingProgress(0);
-    const tick = (now) => {
-      const elapsed = now - countdownStart;
-      const f = elapsed / currentMs;
-      setRingProgress(f);
-      if (f < 1) {
-        countdownRAF = requestAnimationFrame(tick);
-      } else {
-        countdownRAF = null;
-        nextSlide();
-      }
-    };
-    countdownRAF = requestAnimationFrame(tick);
-  };
-
-  // Slide rendering — toggle `.is-current` on the slide container, which
-  // cascades to inner image + text via the variant CSS rules. Also pauses
-  // any video on the leaving slide and restarts the video on the entering
-  // slide from frame 0 (so videos "play immediately" on enter and don't
-  // continue running in the background).
-  let current = 0;
-  const renderSlide = (next) => {
-    slideContainers.forEach((el, i) => {
-      const isNew = (i === next);
-      el.classList.toggle('is-current', isNew);
-      const v = mediaEls[i];
-      if (v && v.tagName === 'VIDEO') {
-        if (isNew) {
-          try { v.currentTime = 0; } catch (_) {}
-          const p = v.play();
-          if (p && p.catch) p.catch(() => {});  // muted + playsinline → autoplay should work
-        } else {
-          try { v.pause(); } catch (_) {}
+        // Version bootstrap error — set in <head> by the ?version= parser
+        // when the URL has no `version` param or one that isn't in the
+        // valid list. (A "config script 404" failure mode falls through to
+        // the existing `if (!cfg)` check below — the err.log will show the
+        // generic "config.js did not set window.APP_CONFIG" message, which
+        // is enough to diagnose since the operator's next move is to check
+        // the file.)
+        if (window.__appBootError === "no-version") {
+          return showError(
+            "This Chrome instance was opened without a valid ?version= parameter. " +
+              'Install the kiosk via one of the "Install App 1 - …" commands in the project root.',
+          );
         }
-      }
-    });
-    pageCur.textContent = String(next + 1);
-    // Hide the sinus background while a fullscreen-variant slide is current
-    document.body.classList.toggle('fullscreen-current',
-      slideContainers[next] && slideContainers[next].dataset.variant === 'fullscreen');
-  };
-  const goTo = (i) => {
-    const n = ((i % slides.length) + slides.length) % slides.length;
-    if (n === current) return;
-    current = n;
-    renderSlide(current);
-    if (!isPaused) startCountdown();
-  };
-  const nextSlide = () => goTo(current + 1);
-  const prevSlide = () => goTo(current - 1);
 
-  // Pause / resume
-  const setPaused = (paused) => {
-    isPaused = !!paused;
-    if (isPaused) {
-      // Freeze ring at its current position
-      stopCountdown();
-      pauseBtn.setAttribute('aria-pressed', 'true');
-      pauseBtn.setAttribute('aria-label', 'Resume auto-advance');
-      iconPause.style.display = 'none';
-      iconPlay.style.display  = 'block';
-      if (pauseResumeTimer) clearTimeout(pauseResumeTimer);
-      if (pauseMs > 0) {
-        pauseResumeTimer = setTimeout(() => setPaused(false), pauseMs);
-      }
-    } else {
-      pauseBtn.setAttribute('aria-pressed', 'false');
-      pauseBtn.setAttribute('aria-label', 'Pause auto-advance');
-      iconPause.style.display = 'block';
-      iconPlay.style.display  = 'none';
-      if (pauseResumeTimer) { clearTimeout(pauseResumeTimer); pauseResumeTimer = null; }
-      // Spec: after pause expires (or manual unpause), countdown starts over
-      startCountdown();
-    }
-  };
+        // Wait for the version's config.js to finish loading (or fail) —
+        // see the bootstrap in <head>. If it 404'd, window.APP_CONFIG
+        // stays undefined and the next check fires.
+        await window.__appConfigReady;
 
-  // Inputs
-  backBtn.addEventListener('pointerdown',  (e) => { e.stopPropagation(); prevSlide(); });
-  nextBtn.addEventListener('pointerdown',  (e) => { e.stopPropagation(); nextSlide(); });
-  pauseBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); setPaused(!isPaused); });
+        const cfg = window.APP_CONFIG;
+        if (!cfg)
+          return showError(
+            "config.js did not set window.APP_CONFIG — check the file.",
+          );
 
-  // Swipe — anywhere on the stage that isn't a control button (those stop
-  // propagation). Swipe left → next slide, swipe right → previous slide.
-  const SWIPE_MAX_MS   = 600;
-  const SWIPE_MIN_DIST = () => Math.max(60, window.innerWidth * 0.04);  // ~77px @1920w, ~154px @4K
-  let swipeStart = null;
-  stage.addEventListener('pointerdown', (e) => {
-    swipeStart = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
-  });
-  const endSwipe = (e) => {
-    if (!swipeStart || (e.pointerId !== undefined && e.pointerId !== swipeStart.id)) return;
-    const dx = e.clientX - swipeStart.x;
-    const dy = e.clientY - swipeStart.y;
-    const dt = performance.now() - swipeStart.t;
-    swipeStart = null;
-    if (dt > SWIPE_MAX_MS) return;
-    const min = SWIPE_MIN_DIST();
-    if (Math.abs(dx) < min || Math.abs(dx) < Math.abs(dy) * 1.2) return;   // require mostly-horizontal motion
-    if (dx < 0) nextSlide(); else prevSlide();
-  };
-  stage.addEventListener('pointerup',     endSwipe);
-  stage.addEventListener('pointercancel', () => { swipeStart = null; });
+        const slides = (cfg.slideshow && cfg.slideshow.images) || [];
+        if (!slides.length)
+          return showError("config.js: slideshow.images is empty");
 
-  // Block context menu / select / drag globally
-  document.addEventListener('contextmenu', (e) => e.preventDefault());
-  document.addEventListener('selectstart', (e) => e.preventDefault());
-  document.addEventListener('dragstart',   (e) => e.preventDefault());
+        // All media paths in config.js are relative to the version directory.
+        // The content-team's config.js stays version-agnostic — paths like
+        // "media/slide-1.jpg" are identical to the pre-versions structure.
+        // versionPath() prepends versions/<v>/ at render time.
+        const versionPath = (p) => "versions/" + window.APP_VERSION + "/" + p;
 
-  // Keep countdown visually accurate after backgrounding
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden || isPaused) return;
-    startCountdown();
-  });
+        // Now that the version is known, point the sinus background at the
+        // version's copy. The HTML omits the <img>'s src so it doesn't 404
+        // during the brief gap before the IIFE runs (or at all if the
+        // version bootstrap failed validation, in which case the error
+        // overlay covers the whole viewport anyway).
+        const sinusBgImg = document.querySelector("#sinus-bg img");
+        if (sinusBgImg) sinusBgImg.src = versionPath("media/sinus-bg.svg");
 
-  // Boot — wait for fonts to be ready so line wrapping (and our line measurement)
-  // are accurate, then show slide 0 and start the countdown.
-  const finalizeBoot = () => {
-    computeStagger();
-    renderSlide(0);
-    startCountdown();
-  };
-  let booted = false;
-  const boot = () => { if (booted) return; booted = true; requestAnimationFrame(finalizeBoot); };
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(boot);
-  }
-  // Safety net in case fonts never resolve (e.g. Typekit unreachable)
-  setTimeout(boot, 1500);
-}());
-</script>
-</body>
+        // Use `typeof === 'number'` (not `||`) so an explicit 0 is honoured:
+        //   autoAdvanceMs: 0 → countdown disabled (`if (autoAdvanceMs <= 0)` later),
+        //                      i.e. slides stay until manual navigation.
+        // The `||`-based fallback would coerce 0 → 8000 and silently break that.
+        const ss = cfg.slideshow || {};
+        const transitionMs =
+          typeof ss.transitionMs === "number" ? ss.transitionMs : 700;
+        const autoAdvanceMs =
+          typeof ss.autoAdvanceMs === "number" ? ss.autoAdvanceMs : 8000;
+        const pauseMinutes = cfg.pauseMinutes != null ? cfg.pauseMinutes : 5;
+        const pauseMs = Math.max(0, pauseMinutes) * 60 * 1000;
+
+        // Controls cluster alignment — "left" (default) or "right". Anything else
+        // falls back to "left". Applied once at boot via a body class; the
+        // back→pagination→next→pause order is preserved either way.
+        const controlsAlign = cfg.controlsAlign === "right" ? "right" : "left";
+        if (controlsAlign === "right")
+          document.body.classList.add("controls-right");
+
+        // Debug — restores the native mouse cursor (kiosk normally hides it via
+        // the universal `* { cursor: none }` rule). Useful for developing /
+        // testing without a touchscreen. Must be `true` to enable; any other
+        // value (including missing) keeps the kiosk cursor-free.
+        if (cfg.debug === true) document.body.classList.add("debug");
+
+        document.documentElement.style.setProperty(
+          "--transition-ms",
+          transitionMs + "ms",
+        );
+
+        // Build slides
+        const slideContainers = [];
+        const mediaEls = []; // each entry is either an <img> or a <video>
+        const textEls = [];
+        const bodyEls = [];
+        const VALID_VARIANTS = new Set([
+          "default",
+          "large-image",
+          "text-right",
+          "fullscreen",
+        ]);
+        const VIDEO_EXT = /\.(mp4|webm|ogg|m4v|mov)(\?.*)?$/i;
+
+        // Build title as flat list of word spans (alternating .lead / .rest classes)
+        // so we can stagger them line-by-line later.
+        const buildTitle = (slide) => {
+          const p = document.createElement("p");
+          p.className = "title";
+
+          const sections = [
+            { text: slide.title, cls: "lead" },
+            { text: slide.subtitle, cls: "rest" },
+          ].filter((s) => s.text);
+
+          sections.forEach((sec, secIdx) => {
+            const words = sec.text.trim().split(/\s+/);
+            words.forEach((word, wIdx) => {
+              const span = document.createElement("span");
+              span.className = "word " + sec.cls;
+              span.textContent = word;
+              p.appendChild(span);
+              const isFinalWord =
+                secIdx === sections.length - 1 && wIdx === words.length - 1;
+              if (!isFinalWord) p.appendChild(document.createTextNode(" "));
+            });
+          });
+          return p;
+        };
+
+        slides.forEach((s, i) => {
+          const variant = VALID_VARIANTS.has(s.variant) ? s.variant : "default";
+          const slideEl = document.createElement("div");
+          slideEl.className = "slide variant-" + variant;
+          slideEl.dataset.variant = variant;
+
+          // Media (image OR video) — file extension on `src` decides which.
+          // Videos play on slide-enter and pause on slide-leave (see renderSlide).
+          const imgFrame = document.createElement("div");
+          imgFrame.className = "slide-img-frame";
+          const isVideo = VIDEO_EXT.test(s.src);
+          let mediaEl;
+          if (isVideo) {
+            mediaEl = document.createElement("video");
+            mediaEl.className = "slide-img"; // shares all the .slide-img CSS (object-fit, opacity, scale entry)
+            mediaEl.src = versionPath(s.src);
+            mediaEl.muted = true; // required for autoplay; kiosk runs silent anyway
+            mediaEl.playsInline = true;
+            mediaEl.loop = s.loop !== false; // loop by default; pass `loop: false` per slide to disable
+            // `metadata` keeps memory footprint low when many videos are configured —
+            // only metadata is loaded ahead of time, full data streams when play() is called.
+            mediaEl.preload = "metadata";
+            mediaEl.draggable = false;
+            mediaEl.setAttribute("aria-label", s.title || "Slide " + (i + 1));
+            mediaEl.addEventListener("error", () =>
+              console.warn("[slideshow] video failed to load:", s.src),
+            );
+          } else {
+            mediaEl = document.createElement("img");
+            mediaEl.className = "slide-img";
+            mediaEl.src = versionPath(s.src);
+            mediaEl.alt = s.title || "Slide " + (i + 1);
+            mediaEl.draggable = false;
+            mediaEl.loading = i === 0 ? "eager" : "lazy";
+            mediaEl.decoding = "async";
+          }
+          imgFrame.appendChild(mediaEl);
+          slideEl.appendChild(imgFrame);
+          mediaEls.push(mediaEl);
+
+          // Text — skipped entirely for the fullscreen variant
+          let bodyEl = null;
+          let textBlock = null;
+          if (variant !== "fullscreen" && (s.title || s.subtitle || s.body)) {
+            textBlock = document.createElement("div");
+            textBlock.className = "slide-text";
+            if (s.title || s.subtitle) textBlock.appendChild(buildTitle(s));
+            if (s.body) {
+              bodyEl = document.createElement("p");
+              bodyEl.className = "body";
+              bodyEl.textContent = s.body;
+              textBlock.appendChild(bodyEl);
+            }
+            slideEl.appendChild(textBlock);
+          }
+          bodyEls.push(bodyEl);
+          textEls.push(textBlock); // null for fullscreen variants
+
+          slidesEl.appendChild(slideEl);
+          slideContainers.push(slideEl);
+        });
+
+        pageTot.textContent = String(slides.length);
+
+        // Once fonts have loaded and layout has settled, measure each title's wrapped
+        // line positions and assign --delay per word so each line animates as a unit,
+        // followed by the body block once the LAST line has fully animated in.
+        const LINE_STAGGER_MS = 120; // snappier per-line cadence
+        const TRANSITION_MS = 380; // matches the CSS transition duration on .word/.body
+        const computeStagger = () => {
+          textEls.forEach((textEl, i) => {
+            if (!textEl) return; // fullscreen variant — no text to stagger
+            const wordSpans = Array.from(textEl.querySelectorAll(".word"));
+            if (!wordSpans.length) return;
+
+            // Group words by their rendered y position (= line index)
+            const lineMap = new Map();
+            wordSpans.forEach((span) => {
+              const y = Math.round(span.getBoundingClientRect().top);
+              if (!lineMap.has(y)) lineMap.set(y, []);
+              lineMap.get(y).push(span);
+            });
+            const lines = [...lineMap.entries()].sort((a, b) => a[0] - b[0]);
+
+            lines.forEach(([_, spans], lineIdx) => {
+              const delay = lineIdx * LINE_STAGGER_MS;
+              spans.forEach((span) =>
+                span.style.setProperty("--delay", delay + "ms"),
+              );
+            });
+
+            // Body waits until the LAST line has finished animating:
+            //   last line starts at (n-1) * stagger, finishes (n-1) * stagger + transition.
+            if (bodyEls[i]) {
+              const lastLineStart =
+                Math.max(0, lines.length - 1) * LINE_STAGGER_MS;
+              bodyEls[i].style.setProperty(
+                "--delay",
+                lastLineStart + TRANSITION_MS + "ms",
+              );
+            }
+          });
+        };
+
+        // Boot path: wait for fonts before measuring lines and showing slide 0 so the
+        // very first slide also gets the line-by-line stagger (rather than landing
+        // before fonts.ready and losing the effect on initial load).
+
+        // Countdown ring — only the progress arc (no permanent track).
+        // RING_R must match the <circle r="…"> in the markup; otherwise the dasharray
+        // won't fully cover the path at start and a small arc is visible at f=0.
+        const RING_R = 47.5;
+        const RING_C = 2 * Math.PI * RING_R;
+        ringProg.style.strokeDasharray = RING_C;
+        ringProg.style.strokeDashoffset = RING_C; // start: empty (ring "fills" as time elapses)
+
+        let countdownStart = 0;
+        let countdownRAF = null;
+        let pauseResumeTimer = null;
+        let isPaused = false;
+
+        const setRingProgress = (fraction) => {
+          const f = Math.min(1, Math.max(0, fraction));
+          ringProg.style.strokeDashoffset = String(RING_C * (1 - f));
+        };
+
+        const stopCountdown = () => {
+          if (countdownRAF) {
+            cancelAnimationFrame(countdownRAF);
+            countdownRAF = null;
+          }
+        };
+
+        // Per-slide auto-advance — each slide may set its own `autoAdvanceMs` to
+        // override the global default. Non-numeric values fall back to the global.
+        // 0 (or negative) means "stay on this slide indefinitely until the user
+        // navigates manually", matching the global semantics.
+        const effectiveAutoAdvanceMs = (i) => {
+          const s = slides[i];
+          return s && typeof s.autoAdvanceMs === "number"
+            ? s.autoAdvanceMs
+            : autoAdvanceMs;
+        };
+
+        let currentMs = 0; // duration of the in-flight countdown; set at startCountdown()
+
+        const startCountdown = () => {
+          stopCountdown();
+          currentMs = effectiveAutoAdvanceMs(current);
+          if (currentMs <= 0 || isPaused) return;
+          countdownStart = performance.now();
+          setRingProgress(0);
+          const tick = (now) => {
+            const elapsed = now - countdownStart;
+            const f = elapsed / currentMs;
+            setRingProgress(f);
+            if (f < 1) {
+              countdownRAF = requestAnimationFrame(tick);
+            } else {
+              countdownRAF = null;
+              nextSlide();
+            }
+          };
+          countdownRAF = requestAnimationFrame(tick);
+        };
+
+        // Slide rendering — toggle `.is-current` on the slide container, which
+        // cascades to inner image + text via the variant CSS rules. Also pauses
+        // any video on the leaving slide and restarts the video on the entering
+        // slide from frame 0 (so videos "play immediately" on enter and don't
+        // continue running in the background).
+        let current = 0;
+        const renderSlide = (next) => {
+          slideContainers.forEach((el, i) => {
+            const isNew = i === next;
+            el.classList.toggle("is-current", isNew);
+            const v = mediaEls[i];
+            if (v && v.tagName === "VIDEO") {
+              if (isNew) {
+                try {
+                  v.currentTime = 0;
+                } catch (_) {}
+                const p = v.play();
+                if (p && p.catch) p.catch(() => {}); // muted + playsinline → autoplay should work
+              } else {
+                try {
+                  v.pause();
+                } catch (_) {}
+              }
+            }
+          });
+          pageCur.textContent = String(next + 1);
+          // Hide the sinus background while a fullscreen-variant slide is current
+          document.body.classList.toggle(
+            "fullscreen-current",
+            slideContainers[next] &&
+              slideContainers[next].dataset.variant === "fullscreen",
+          );
+        };
+        const goTo = (i) => {
+          const n = ((i % slides.length) + slides.length) % slides.length;
+          if (n === current) return;
+          current = n;
+          renderSlide(current);
+          if (!isPaused) startCountdown();
+        };
+        const nextSlide = () => goTo(current + 1);
+        const prevSlide = () => goTo(current - 1);
+
+        // Pause / resume
+        const setPaused = (paused) => {
+          isPaused = !!paused;
+          if (isPaused) {
+            // Freeze ring at its current position
+            stopCountdown();
+            pauseBtn.setAttribute("aria-pressed", "true");
+            pauseBtn.setAttribute("aria-label", "Resume auto-advance");
+            iconPause.style.display = "none";
+            iconPlay.style.display = "block";
+            if (pauseResumeTimer) clearTimeout(pauseResumeTimer);
+            if (pauseMs > 0) {
+              pauseResumeTimer = setTimeout(() => setPaused(false), pauseMs);
+            }
+          } else {
+            pauseBtn.setAttribute("aria-pressed", "false");
+            pauseBtn.setAttribute("aria-label", "Pause auto-advance");
+            iconPause.style.display = "block";
+            iconPlay.style.display = "none";
+            if (pauseResumeTimer) {
+              clearTimeout(pauseResumeTimer);
+              pauseResumeTimer = null;
+            }
+            // Spec: after pause expires (or manual unpause), countdown starts over
+            startCountdown();
+          }
+        };
+
+        // Inputs
+        backBtn.addEventListener("pointerdown", (e) => {
+          e.stopPropagation();
+          prevSlide();
+        });
+        nextBtn.addEventListener("pointerdown", (e) => {
+          e.stopPropagation();
+          nextSlide();
+        });
+        pauseBtn.addEventListener("pointerdown", (e) => {
+          e.stopPropagation();
+          setPaused(!isPaused);
+        });
+
+        // Swipe — anywhere on the stage that isn't a control button (those stop
+        // propagation). Swipe left → next slide, swipe right → previous slide.
+        const SWIPE_MAX_MS = 600;
+        const SWIPE_MIN_DIST = () => Math.max(60, window.innerWidth * 0.04); // ~77px @1920w, ~154px @4K
+        let swipeStart = null;
+        stage.addEventListener("pointerdown", (e) => {
+          swipeStart = {
+            x: e.clientX,
+            y: e.clientY,
+            t: performance.now(),
+            id: e.pointerId,
+          };
+        });
+        const endSwipe = (e) => {
+          if (
+            !swipeStart ||
+            (e.pointerId !== undefined && e.pointerId !== swipeStart.id)
+          )
+            return;
+          const dx = e.clientX - swipeStart.x;
+          const dy = e.clientY - swipeStart.y;
+          const dt = performance.now() - swipeStart.t;
+          swipeStart = null;
+          if (dt > SWIPE_MAX_MS) return;
+          const min = SWIPE_MIN_DIST();
+          if (Math.abs(dx) < min || Math.abs(dx) < Math.abs(dy) * 1.2) return; // require mostly-horizontal motion
+          if (dx < 0) nextSlide();
+          else prevSlide();
+        };
+        stage.addEventListener("pointerup", endSwipe);
+        stage.addEventListener("pointercancel", () => {
+          swipeStart = null;
+        });
+
+        // Block context menu / select / drag globally
+        document.addEventListener("contextmenu", (e) => e.preventDefault());
+        document.addEventListener("selectstart", (e) => e.preventDefault());
+        document.addEventListener("dragstart", (e) => e.preventDefault());
+
+        // Keep countdown visually accurate after backgrounding
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden || isPaused) return;
+          startCountdown();
+        });
+
+        // Boot — wait for fonts to be ready so line wrapping (and our line measurement)
+        // are accurate, then show slide 0 and start the countdown.
+        const finalizeBoot = () => {
+          computeStagger();
+          renderSlide(0);
+          startCountdown();
+        };
+        let booted = false;
+        const boot = () => {
+          if (booted) return;
+          booted = true;
+          requestAnimationFrame(finalizeBoot);
+        };
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(boot);
+        }
+        // Safety net in case fonts never resolve (e.g. Typekit unreachable)
+        setTimeout(boot, 1500);
+      })();
+    </script>
+  </body>
 </html>

@@ -8,11 +8,23 @@
 # Expected zip layout (only media/ folders and config.js files are
 # picked up — everything else in the zip is ignored and cleaned up):
 #   app1-slideshow/
-#     media/                 (optional — replaces app1-slideshow/media/)
-#       slide-1.jpg
-#       slide-2.jpg
-#       …
-#     config.js              (optional — replaces app1-slideshow/config.js)
+#     versions/                  App 1 ships in three content versions
+#       ess/                     (ESS / OL / Microgrid). Each version
+#         media/                 has its own optional media/ and
+#           slide-1.jpg          config.js, replaced independently. A
+#           slide-2.jpg          zip may include any subset of the
+#           …                    three versions, and any combination of
+#         config.js              media/+config.js within each version.
+#       ol/
+#         media/
+#           slide-1.jpg
+#           …
+#         config.js
+#       microgrid/
+#         media/
+#           slide-1.jpg
+#           …
+#         config.js
 #   app2-chapters/
 #     media/
 #       main.mp4
@@ -37,7 +49,7 @@
 # The script accepts a one-level-deep nested layout too (e.g. when the
 # zip extracts into a single top-level folder named after the package):
 #   victron-content-2026/
-#     app1-slideshow/media/…
-#     app1-slideshow/config.js
+#     app1-slideshow/versions/ess/media/…
+#     app1-slideshow/versions/ol/config.js
 #     app2-chapters/media/…
 #     app3-multi-screen/media/…

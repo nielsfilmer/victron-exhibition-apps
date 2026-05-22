@@ -17,6 +17,7 @@ non-developer Victron staffer to follow at the show.
 | Niels Filmer | Initial document — manual for the rewritten kiosk apps (Victron Exhibition Apps). | V1.0 | 14-5-2026 |
 | Niels Filmer | Added App 3 (3-screen synced kiosk slideshow + WebSocket sync relay); content-update.sh now also replaces each app's config.js when present in the zip. | V1.1 | 19-5-2026 |
 | Niels Filmer | Removed App 3's on-screen controls — the kiosk is now display-only, three fullscreen photos/videos auto-advancing on a config-driven timer (no visitor interaction). None of the three displays needs to be a touchscreen anymore. | V1.2 | 19-5-2026 |
+| Peter Coolen | Split App 1 into three content versions — ESS, OL, Microgrid. Each ships its own `config.js` + `media/` under `app1-slideshow/versions/<v>/`; install with the matching `Install App 1 - <Version>.command` (only one App 1 version may run at a time — installing one auto-unloads the other two as siblings). The bulk content updater now writes into the version subfolders. | V1.3 | 21-5-2026 |
 
 ---
 
@@ -164,15 +165,17 @@ cd victron-exhibition-apps
 This creates `~/victron-exhibition-apps/` containing the whole
 project. **Don't rename or move the folder after install** — the
 LaunchAgent gets the absolute path baked in. If you do need to move
-it later, re-run `./kiosk/install.sh app1` (or `app2`) from the new
-location to refresh the path.
+it later, re-run the matching install command (e.g.
+`./kiosk/install.sh app1-ess`, `app1-ol`, `app1-microgrid`, or
+`app2`/`app3`) from the new location to refresh the path.
 
 > ⚠ **Don't clone into `~/Documents/`, `~/Desktop/`, `~/Downloads/`,
 > `~/Pictures/`, `~/Movies/`, or `~/Music/`.** macOS protects these
 > folders via TCC; LaunchAgents can't read scripts from them and the
 > kiosk will silently fail to start at boot ("Operation not permitted"
-> in `kiosk/app1.err.log`). `install.sh` refuses to install if the
-> project is in one of these locations. The home directory itself
+> in `kiosk/app1-<v>.err.log` for App 1, or `kiosk/app2.err.log`).
+> `install.sh` refuses to install if the project is in one of these
+> locations. The home directory itself
 > (`~/`) is fine, as is anywhere else outside the protected list
 > (e.g. an external drive mounted under `/Volumes/`).
 
@@ -193,7 +196,12 @@ location to refresh the path.
 **Easy mode (no Terminal needed)** — open the project folder in
 Finder (`~/victron-exhibition-apps`) and **double-click**:
 
-- `Install App 1.command` — for App 1 (slideshow)
+- `Install App 1 - ESS.command` — for App 1 with **ESS** content
+- `Install App 1 - OL.command` — for App 1 with **OL** content
+- `Install App 1 - Microgrid.command` — for App 1 with **Microgrid** content
+  (App 1 ships in three content versions — only one may run at a
+  time. Installing one auto-unloads the other two as siblings, so
+  you can switch versions without uninstalling first.)
 - `Install App 2.command` — for App 2 (chapter video)
 - `Install App 3.command` — for App 3 (3-screen synced slideshow).
   **Complete §3.7 first** — App 3 needs the 3 displays plugged in
@@ -213,58 +221,79 @@ when it's done.
 Easy-mode buttons):
 
 ```bash
-./kiosk/install.sh app1     # for App 1 (slideshow)
+./kiosk/install.sh app1-ess        # for App 1 (ESS content)
 # OR
-./kiosk/install.sh app2     # for App 2 (chapter video)
+./kiosk/install.sh app1-ol         # for App 1 (OL content)
 # OR
-./kiosk/install.sh app3     # for App 3 (3-screen synced slideshow)
+./kiosk/install.sh app1-microgrid  # for App 1 (Microgrid content)
+# OR
+./kiosk/install.sh app2            # for App 2 (chapter video)
+# OR
+./kiosk/install.sh app3            # for App 3 (3-screen synced slideshow)
 ```
 
-You should see (for app1):
+You should see (for `app1-ess`):
 
 ```
-Installed and loaded com.intersolar.app1.
-Start now:   launchctl start com.intersolar.app1
-Logs:        /Users/<you>/victron-exhibition-apps/kiosk/app1.out.log / app1.err.log
+Installed and loaded com.intersolar.app1-ess.
+Start now:   launchctl start com.intersolar.app1-ess
+Logs:        /Users/<you>/victron-exhibition-apps/kiosk/app1-ess.{out,err}.log
 ```
 
 If instead you see a "**Refusing to install: project lives in a
 TCC-protected folder**" error, the project was cloned into one of
 the protected locations (see §3.1). Follow the `mv` command shown
-in the error to move it out, then re-run `./kiosk/install.sh app1`.
+in the error to move it out, then re-run the matching install
+command (e.g. `./kiosk/install.sh app1-ess`).
 
 What just happened:
-- The script templated the project's absolute path into
-  `kiosk/com.intersolar.app{1,2}.plist`,
+- The script templated the project's absolute path into the matching
+  plist (`kiosk/com.intersolar.app1-{ess,ol,microgrid}.plist`,
+  `app2.plist`, or one of App 3's four),
 - Copied the plist to `~/Library/LaunchAgents/`,
 - Loaded it via `launchctl` so it runs on every login,
-- Set the launch script executable.
+- Set the launch script executable,
+- For App 1: unloaded the other two App 1 version agents (only one
+  App 1 version may run at a time).
 
 The kiosk will now start automatically at login, restart automatically
 if Chrome quits unexpectedly, and write logs to
-`kiosk/app{1,2}.{out,err}.log`.
+`kiosk/app1-{ess,ol,microgrid}.{out,err}.log` (App 1) or
+`kiosk/app2.{out,err}.log` (App 2).
 
 ### 3.4 Reboot to verify
 Reboot the Mac. After auto-login, Chrome should come up fullscreen
 running the chosen app, no manual interaction needed.
 
-If it doesn't, check `kiosk/app{1,2}.err.log` for the reason. The most
-common cause is the project folder having moved since `install.sh` ran
-— re-run `./kiosk/install.sh app1` (or `app2`) to refresh the path.
+If it doesn't, check `kiosk/app1-{ess,ol,microgrid}.err.log` (or
+`app2.err.log`, or App 3's logs) for the reason. The most common
+cause is the project folder having moved since `install.sh` ran —
+re-run the matching install command (e.g.
+`./kiosk/install.sh app1-ess`, `./kiosk/install.sh app2`) to refresh
+the path.
 
 ### 3.5 Switching between App 1, App 2, and App 3
 There's no in-app toggle (each kiosk runs one app at a time). **Always
-uninstall the current app before installing another** — otherwise
-multiple LaunchAgents are loaded and the apps fight to take over the
-foreground. In Terminal:
+uninstall the current app before installing a different app type** —
+otherwise multiple LaunchAgents are loaded and the apps fight to take
+over the foreground. In Terminal:
 
 ```bash
 ./kiosk/install.sh uninstall app1     # or app2, or app3
-./kiosk/install.sh app2               # or app1, or app3
+./kiosk/install.sh app2               # or app1-{ess,ol,microgrid}, or app3
 ```
 
-Reboot to verify only the new app starts. (Uninstalling `app3` removes
-all four of its LaunchAgents: the ws relay + center + left + right.)
+Reboot to verify only the new app starts. (Uninstalling `app1` removes
+all three App 1 version agents — ESS, OL, Microgrid. Uninstalling
+`app3` removes all four of its LaunchAgents: the ws relay + center +
+left + right.)
+
+**Switching between App 1 versions (ESS ↔ OL ↔ Microgrid) is
+automatic.** Installing any one (via the Finder command or
+`./kiosk/install.sh app1-<v>`) auto-unloads the other two App 1
+versions as siblings — you don't need to uninstall first. App 2 and
+App 3 are NOT auto-unloaded by an App 1 install: only the App 1
+versions are treated as mutually exclusive.
 
 ### 3.6 Updating the kiosk to the latest version
 When new content / fixes are pushed to GitHub:
@@ -423,10 +452,15 @@ zip is ignored and cleaned up.
 restore the original committed media + config with:
 
 ```bash
-git checkout -- app1-slideshow/{media,config.js} \
+git checkout -- app1-slideshow/versions/ \
                 app2-chapters/{media,config.js} \
                 app3-multi-screen/{media,config.js}
 ```
+
+(`app1-slideshow/versions/` covers all three App 1 version subfolders
+in one path; everything else under `app1-slideshow/` —
+`index.html`, `fonts/` — is dev / ops scope and isn't touched by the
+content updater.)
 
 Then re-run `./kiosk/update.sh` (or double-click `Update.command`)
 to reload the kiosk. The kiosk will show its on-screen error overlay
@@ -436,13 +470,22 @@ window.APP_CONFIG…", "slideshow.images is empty", or App 3's
 mis-filed `config.js` — any of these is the signal to roll back.
 
 ### 4.2 Manual edits — App 1 (slideshow)
+App 1 ships in three content versions — `ess`, `ol`, `microgrid` —
+each with its own `config.js` and `media/` under
+`app1-slideshow/versions/<v>/`. Edit the version that's currently
+installed on this Mac (check which is loaded with
+`launchctl list | grep com.intersolar.app1-`).
+
 - Slide content (image / video, title, subtitle, body, variant,
-  duration, loop): edit `app1-slideshow/config.js`. Save and reload
-  the kiosk (see [§6 Operations](#6-daily-operations) — quit Chrome,
-  it auto-relaunches).
-- Add a new image: drop the file into `app1-slideshow/media/`,
-  reference its filename from `config.js`. Same for videos
-  (`.mp4`/`.webm`/`.ogg`).
+  duration, loop): edit `app1-slideshow/versions/<v>/config.js`. Save
+  and reload the kiosk (see [§6 Operations](#6-daily-operations) —
+  quit Chrome, it auto-relaunches).
+- Add a new image: drop the file into
+  `app1-slideshow/versions/<v>/media/`, reference its filename from
+  `versions/<v>/config.js`. Same for videos (`.mp4`/`.webm`/`.ogg`).
+- The other two versions on disk (not currently installed) are
+  untouched — leaving room to swap a different version in via
+  `./kiosk/install.sh app1-<other-v>` without losing your edits.
 
 ### 4.3 Manual edits — App 3 (3-screen synced slideshow)
 - Slide content (left/middle/right media per slide, duration, loop):
@@ -505,7 +548,9 @@ If the kiosk doesn't appear but the Mac desktop is visible:
 
 If Chrome shows "Restore previous session?" — the launch script
 auto-strips this on next start. If it persists, delete the kiosk
-profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
+profile: `rm -rf ~/.kiosk-app1-<v>-profile` (where `<v>` is `ess`,
+`ol`, or `microgrid` — the App 1 version that's installed) or
+`~/.kiosk-app2-profile`, then reboot.
 
 ### 6.2 Closing the stand
 - Power off the touchscreen and the Mac at the power strip. They'll
@@ -519,13 +564,13 @@ profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 |---|---|
 | Black touchscreen, kiosk Mac is on | Verify HDMI cable is seated at both ends and the touchscreen is powered. |
 | Mac desktop visible instead of the kiosk | Force-quit Chrome (`⌘+⌥+Esc`); LaunchAgent relaunches within 10 s. |
-| Chrome "Restore session?" prompt visible | `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot. |
+| Chrome "Restore session?" prompt visible | `rm -rf ~/.kiosk-app1-<v>-profile` (where `<v>` = `ess`/`ol`/`microgrid`) or `~/.kiosk-app2-profile`, then reboot. |
 | App 2 has red dashed boxes over chapter buttons | `debug: true` is still set in `app2-chapters/config.js` — change to `false` and reload. |
 | Update notification pops up | macOS notifications weren't fully muted (§2.5). Fix it during downtime. |
 | Video plays but you hear nothing | **By design** — kiosk video is muted. (Browsers also block autoplay of un-muted video.) |
-| Kiosk doesn't auto-start after a reboot | Auto-login isn't on (§2.2), or the project folder moved (re-run `./kiosk/install.sh app1`). Check `kiosk/app1.err.log`. |
-| `kiosk/app1.err.log` (or app2) says "Operation not permitted" | Project lives in a TCC-protected folder (`~/Documents/`, `~/Desktop/`, `~/Downloads/`, `~/Pictures/`, `~/Movies/`, `~/Music/`). LaunchAgents can't read scripts from these. Move the project to `~/` (or anywhere else outside the protected list) and re-run `./kiosk/install.sh app1`. See §3.1 for the full list. |
-| `./kiosk/update.sh` says "not a git repo" | Project was downloaded as a zip rather than cloned. Re-clone per §3.1 (back up `app1-slideshow/config.js` and `app2-chapters/config.js` first if you've edited them). |
+| Kiosk doesn't auto-start after a reboot | Auto-login isn't on (§2.2), or the project folder moved (re-run the matching `./kiosk/install.sh app1-{ess,ol,microgrid}`, or `app2`/`app3`). Check `kiosk/app1-<v>.err.log` (or `kiosk/app2.err.log`, or App 3's logs). |
+| `kiosk/app1-<v>.err.log` (or app2/app3) says "Operation not permitted" | Project lives in a TCC-protected folder (`~/Documents/`, `~/Desktop/`, `~/Downloads/`, `~/Pictures/`, `~/Movies/`, `~/Music/`). LaunchAgents can't read scripts from these. Move the project to `~/` (or anywhere else outside the protected list) and re-run the matching `./kiosk/install.sh app1-{ess|ol|microgrid}` (or `app2`/`app3`). See §3.1 for the full list. |
+| `./kiosk/update.sh` says "not a git repo" | Project was downloaded as a zip rather than cloned. Re-clone per §3.1 (back up `app1-slideshow/versions/*/config.js` and `app2-chapters/config.js` first if you've edited them). |
 | `./kiosk/update.sh` says "local changes detected" | Someone edited a file on the kiosk Mac directly. Either save the change properly (`git stash` to set aside, can be restored), or discard with `git checkout -- .` (destructive — permanent). |
 | App 3: left or right display is on the wrong screen | macOS display arrangement doesn't match `kiosk/app3-displays.env`. Re-check §3.7 steps 2-3 (arrangement + Main Display on center) and step 6 (coordinates in displays.env). Then `./kiosk/update.sh`. |
 | App 3: left or right shows the wrong slide | WS relay isn't running. Check `kiosk/app3-ws.err.log` (`tail kiosk/app3-ws.err.log`). Confirm the relay binary is executable for your CPU: `ls -l kiosk/bin/kiosk-ws-relay-$(uname -m)`. Restart with `./kiosk/update.sh`. |
@@ -534,13 +579,20 @@ profile: `rm -rf ~/.kiosk-app1-profile` (or `app2`), then reboot.
 
 ### 6.4 Exiting kiosk mode for service
 Two ways:
-1. `⌘+⌥+Esc → Google Chrome → Force Quit` (LaunchAgent will relaunch in ~10 s — if you want it to stay closed:
-   `launchctl unload ~/Library/LaunchAgents/com.intersolar.app1.plist`).
-2. To re-enable: `launchctl load -w ~/Library/LaunchAgents/com.intersolar.app1.plist`.
+1. `⌘+⌥+Esc → Google Chrome → Force Quit` (LaunchAgent will relaunch
+   in ~10 s — if you want it to stay closed:
+   `launchctl unload ~/Library/LaunchAgents/com.intersolar.app1-<v>.plist`
+   for App 1 (where `<v>` is the installed version — `ess`/`ol`/`microgrid`),
+   or the matching `app2.plist` / `app3-*.plist`).
+2. To re-enable: `launchctl load -w ~/Library/LaunchAgents/com.intersolar.app1-<v>.plist`.
 
 To uninstall the auto-launch entirely:
 ```bash
-./kiosk/install.sh uninstall app1     # or app2, or app3
+./kiosk/install.sh uninstall app1            # all 3 App 1 version agents
+# OR
+./kiosk/install.sh uninstall app1-ess        # one specific App 1 version (or app1-ol / app1-microgrid)
+# OR
+./kiosk/install.sh uninstall app2            # or app3
 ```
 
 (For App 3 this removes all four LaunchAgents — relay + center + left + right.)

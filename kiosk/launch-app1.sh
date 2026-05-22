@@ -1,11 +1,36 @@
 #!/usr/bin/env bash
-# Launches App 1 (video + slideshow) in Chrome kiosk mode.
-# Designed to be run on login by com.intersolar.app1.plist, but also runnable manually.
+# Launches App 1 (slideshow) in Chrome kiosk mode for the specified
+# content version. App 1 ships in three versions — ESS, OL, Microgrid
+# — each with its own config.js + media/ under
+# app1-slideshow/versions/<name>/. The thin wrapper scripts
+# (launch-app1-{ess,ol,microgrid}.sh) call this one with the matching
+# version. Designed to be run on login via the per-version LaunchAgent
+# plists; also runnable manually for testing.
+#
+# Usage:
+#   ./launch-app1.sh ess
+#   ./launch-app1.sh ol
+#   ./launch-app1.sh microgrid
 set -euo pipefail
+
+VERSION="${1:-}"
+case "$VERSION" in
+  ess|ol|microgrid) : ;;
+  '')
+    echo "Usage: $0 {ess|ol|microgrid}" >&2
+    exit 1 ;;
+  *)
+    echo "Unknown version: $VERSION (expected ess|ol|microgrid)" >&2
+    exit 1 ;;
+esac
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)/app1-slideshow"
 INDEX_FILE="$APP_DIR/index.html"
-PROFILE_DIR="$HOME/.kiosk-app1-profile"
+# Each version gets its own persistent Chrome profile so installs
+# don't bleed Chrome state across versions. Operator-friendly cleanup:
+# `rm -rf ~/.kiosk-app1-<v>-profile` resets the picked version's
+# Chrome to a fresh state without affecting the others.
+PROFILE_DIR="$HOME/.kiosk-app1-$VERSION-profile"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 if [[ ! -f "$INDEX_FILE" ]]; then
@@ -45,4 +70,4 @@ exec "$CHROME" \
   --disable-renderer-backgrounding \
   --check-for-update-interval=31536000 \
   --user-data-dir="$PROFILE_DIR" \
-  --app="file://$INDEX_FILE"
+  --app="file://$INDEX_FILE?version=$VERSION"

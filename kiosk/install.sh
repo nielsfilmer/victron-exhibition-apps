@@ -3,13 +3,22 @@
 # copies them to ~/Library/LaunchAgents, and loads the chosen one(s).
 #
 # Usage:
-#   ./kiosk/install.sh app1     # install + load App 1 LaunchAgent
-#   ./kiosk/install.sh app2     # install + load App 2 LaunchAgent
-#   ./kiosk/install.sh app3     # install + load the 4 App 3 LaunchAgents
-#                               # (ws relay + center + left + right)
-#   ./kiosk/install.sh uninstall app1
+#   ./kiosk/install.sh app1-ess        # install + load App 1 (ESS content)
+#   ./kiosk/install.sh app1-ol         # install + load App 1 (OL content)
+#   ./kiosk/install.sh app1-microgrid  # install + load App 1 (Microgrid content)
+#   ./kiosk/install.sh app2            # install + load App 2 LaunchAgent
+#   ./kiosk/install.sh app3            # install + load the 4 App 3 LaunchAgents
+#                                      # (ws relay + center + left + right)
+#   ./kiosk/install.sh uninstall app1            # uninstall all 3 App 1 version agents
+#   ./kiosk/install.sh uninstall app1-ess        # uninstall just one App 1 version
 #   ./kiosk/install.sh uninstall app2
 #   ./kiosk/install.sh uninstall app3
+#
+# App 1 ships in three content versions (ESS / OL / Microgrid). Only
+# one may be loaded at a time — installing one auto-unloads the other
+# two as siblings. App 2 and App 3 are conceptually separate apps and
+# don't auto-unload each other or App 1 — switching between app types
+# remains a documented manual step in INSTALL.md §3.5.
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,6 +35,13 @@ APP3_LABELS=(
   com.intersolar.app3-left
   com.intersolar.app3-right
 )
+
+# App 1 ships in three content versions (ESS / OL / Microgrid). They
+# share the same code (app1-slideshow/index.html, fonts/) but each has
+# its own config.js + media/ under app1-slideshow/versions/<name>/.
+# Only one may be loaded at a time — install_app1_version() unloads
+# the other two siblings before installing the chosen one.
+APP1_VERSIONS=(ess ol microgrid)
 
 # macOS TCC protects these user folders. LaunchAgents invoked by /bin/bash
 # can't read scripts living under them — the script silently fails with
@@ -58,7 +74,7 @@ refuse_if_protected_path() {
 
     mv "$p" "$HOME/$(basename "$p")"
     cd "$HOME/$(basename "$p")"
-    ./kiosk/install.sh ${1:-app1}
+    ./kiosk/install.sh ${1:-app1-ess}
 
 EOF
       exit 1
@@ -96,11 +112,28 @@ uninstall_label() {
   echo "Removed $label."
 }
 
-install_app1() {
-  refuse_if_protected_path app1
-  install_label "com.intersolar.app1"
-  echo "Start now:   launchctl start com.intersolar.app1"
-  echo "Logs:        $PROJECT_DIR/kiosk/app1.out.log / app1.err.log"
+install_app1_version() {
+  local version="$1"
+  refuse_if_protected_path "app1-$version"
+  # Mutual exclusion — App 1 versions are content-only variants of the
+  # same kiosk; running two at once would have both Chromes fighting
+  # for the same display. Unload the other two before installing the
+  # chosen one. (App 2 and App 3 sit outside this; switching between
+  # apps remains a documented manual `uninstall` step per
+  # INSTALL.md §3.5 — that convention isn't extended here.)
+  for sibling in "${APP1_VERSIONS[@]}"; do
+    if [[ "$sibling" != "$version" ]]; then
+      local sibling_dst="$AGENT_DIR/com.intersolar.app1-$sibling.plist"
+      if [[ -f "$sibling_dst" ]]; then
+        launchctl unload "$sibling_dst" 2>/dev/null || true
+        rm -f "$sibling_dst"
+        echo "Removed sibling com.intersolar.app1-$sibling."
+      fi
+    fi
+  done
+  install_label "com.intersolar.app1-$version"
+  echo "Start now:   launchctl start com.intersolar.app1-$version"
+  echo "Logs:        $PROJECT_DIR/kiosk/app1-$version.{out,err}.log"
 }
 
 install_app2() {
@@ -150,19 +183,41 @@ install_app3() {
 
 uninstall_one() {
   case "$1" in
-    app1|app2) uninstall_label "com.intersolar.$1" ;;
+    app1)
+      # Unload all three App 1 version agents (matches the App 3
+      # multi-label pattern below). Use when the operator just wants
+      # "no App 1 running" and doesn't care which version.
+      for v in "${APP1_VERSIONS[@]}"; do
+        uninstall_label "com.intersolar.app1-$v"
+      done ;;
+    app1-ess|app1-ol|app1-microgrid)
+      uninstall_label "com.intersolar.$1" ;;
+    app2) uninstall_label "com.intersolar.$1" ;;
     app3)
       for label in "${APP3_LABELS[@]}"; do
         uninstall_label "$label"
       done ;;
-    *) echo "Usage: $0 uninstall {app1|app2|app3}" >&2; exit 1 ;;
+    *) echo "Usage: $0 uninstall {app1|app1-ess|app1-ol|app1-microgrid|app2|app3}" >&2; exit 1 ;;
   esac
 }
 
 case "${1:-}" in
-  app1) install_app1 ;;
+  app1-ess|app1-ol|app1-microgrid) install_app1_version "${1#app1-}" ;;
+  app1|app1-*)
+    # Bare `app1` OR an unknown app1-* variant (e.g. typo, wrong case,
+    # or a version that hasn't been added yet — see pitfall #21).
+    # Don't guess for the operator — fail with the list of options so
+    # they pick deliberately. This also catches anyone using the old
+    # ./kiosk/install.sh app1 invocation and points them at the new
+    # command shape. Order matters: the three valid versions are
+    # matched above; everything else app1-shaped lands here.
+    echo "App 1 ships in three content versions. Pick one:" >&2
+    echo "  $0 app1-ess        # ESS content" >&2
+    echo "  $0 app1-ol         # OL content" >&2
+    echo "  $0 app1-microgrid  # Microgrid content" >&2
+    exit 1 ;;
   app2) install_app2 ;;
   app3) install_app3 ;;
-  uninstall) uninstall_one "${2:?usage: uninstall app1|app2|app3}" ;;
-  *) echo "Usage: $0 {app1|app2|app3|uninstall {app1|app2|app3}}" >&2; exit 1 ;;
+  uninstall) uninstall_one "${2:?usage: uninstall app1|app1-ess|app1-ol|app1-microgrid|app2|app3}" ;;
+  *) echo "Usage: $0 {app1-ess|app1-ol|app1-microgrid|app2|app3|uninstall {app1|app1-ess|app1-ol|app1-microgrid|app2|app3}}" >&2; exit 1 ;;
 esac

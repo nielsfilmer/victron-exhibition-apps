@@ -10,10 +10,12 @@
 #   1. Read the zip URL from kiosk/content-url.txt
 #   2. Download to a temp dir
 #   3. Unzip
-#   4. For each app (app1-slideshow / app2-chapters / app3-multi-screen):
-#        - replace local media/ from the zip's app{N}/media/ if present
-#        - replace local config.js from the zip's app{N}/config.js if present
-#      Either or both may be omitted from the zip per app — anything
+#   4. For each target (App 1 has three version subfolders —
+#      app1-slideshow/versions/{ess,ol,microgrid} — plus app2-chapters
+#      and app3-multi-screen):
+#        - replace local media/ from the zip's <target>/media/ if present
+#        - replace local config.js from the zip's <target>/config.js if present
+#      Either or both may be omitted from the zip per target — anything
 #      missing is left untouched on disk.
 #   5. Delete the temp dir + everything else from the zip
 #   6. Restart any loaded kiosk LaunchAgent so the running kiosk picks
@@ -31,9 +33,12 @@
 #     will show its on-screen error overlay. Recovery below.
 #   - To restore the original committed media + config (if a content
 #     update went wrong), run:
-#       git checkout -- app1-slideshow/{media,config.js} \
+#       git checkout -- app1-slideshow/versions/ \
 #                       app2-chapters/{media,config.js} \
 #                       app3-multi-screen/{media,config.js}
+#     (app1-slideshow/versions/ covers all three version subfolders;
+#     everything else under app1-slideshow/ — index.html, fonts/ — is
+#     out of the content-team scope and is never modified by this script.)
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -128,11 +133,20 @@ find_in_zip() {
   return 1
 }
 
-# 6. Replace local media/ + config.js per app — each is independent;
-#    a zip may include either, both, or neither for any given app.
+# 6. Replace local media/ + config.js per target — each is independent;
+#    a zip may include either, both, or neither for any given target.
 #    Anything missing from the zip is left untouched on disk (matches
 #    the existing media-only behaviour the content team is used to).
-APPS=(app1-slideshow app2-chapters app3-multi-screen)
+#    App 1 has three version subfolders under app1-slideshow/versions/,
+#    each treated as its own target (the find_in_zip helper resolves
+#    arbitrarily-deep paths, so no special-casing here).
+APPS=(
+  app1-slideshow/versions/ess
+  app1-slideshow/versions/ol
+  app1-slideshow/versions/microgrid
+  app2-chapters
+  app3-multi-screen
+)
 REPLACED_MEDIA=0
 REPLACED_CONFIG=0
 TOUCHED_APPS=()
@@ -170,8 +184,9 @@ done
 
 if [[ $((REPLACED_MEDIA + REPLACED_CONFIG)) -eq 0 ]]; then
   red "✖ Nothing was replaced — the zip's layout doesn't match the"
-  echo "  expected structure (no app{1,2,3}*/media/ folders and no"
-  echo "  app{1,2,3}*/config.js files were found). See"
+  echo "  expected structure (no media/ folders and no config.js files"
+  echo "  were found at any of: app1-slideshow/versions/{ess,ol,microgrid}/,"
+  echo "  app2-chapters/, app3-multi-screen/). See"
   echo "  kiosk/content-url.txt for the layout the script expects."
   exit 1
 fi
@@ -207,7 +222,9 @@ fi
 UID_NUM="$(id -u)"
 RELOADED=0
 KIOSK_LABELS=(
-  com.intersolar.app1
+  com.intersolar.app1-ess
+  com.intersolar.app1-ol
+  com.intersolar.app1-microgrid
   com.intersolar.app2
   com.intersolar.app3-ws
   com.intersolar.app3-center
