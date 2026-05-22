@@ -305,21 +305,32 @@ The Victron design system file (referenced earlier in the build) is
   and `media/` under `app1-slideshow/versions/<v>/`. The shared
   `index.html` reads `?version=<v>` from the URL at boot via a
   bootstrap `<script>` in `<head>`, validates against the three valid
-  names, sets `window.APP_VERSION`, and `document.write`s the matching
-  `<script src="versions/<v>/config.js">` into the document so the
-  existing IIFE at the end of `<body>` finds `window.APP_CONFIG`
-  populated when it runs (no async restructuring of the IIFE was
-  needed). All media paths in `config.js` are resolved at render time
-  via a `versionPath()` helper that prepends `versions/<v>/` — the
-  content team's `config.js` stays version-agnostic with paths like
-  `"media/slide-1.jpg"`, identical to the pre-versions structure. The
-  sinus-bg `<img>` has no static `src` in the HTML (so it doesn't 404
-  if the version bootstrap fails); JS sets its `src` to
-  `versionPath('media/sinus-bg.svg')` once the version is known.
+  names, sets `window.APP_VERSION`, and appends a dynamic
+  `<script src="versions/<v>/config.js">` element to `<head>` (NOT
+  via `document.write` — Chrome blocks document.write-inserted scripts
+  on `file://` with `(blocked:origin)` because each file:// URL is a
+  unique origin in modern Chrome; the dynamic-script-element path
+  passes the same-origin check and works reliably). The bootstrap
+  exposes `window.__appConfigReady` as a Promise that resolves when
+  the config script loads (or 404s). The main IIFE at the end of
+  `<body>` is `async` and `await`s this Promise before reading
+  `window.APP_CONFIG`. The early `?version=`-missing check runs
+  before the `await` so the friendly error overlay renders without
+  delay; the no-version branch pre-resolves the Promise so the
+  IIFE doesn't hang.
+  All media paths in `config.js` are resolved at render time via a
+  `versionPath()` helper that prepends `versions/<v>/` — the content
+  team's `config.js` stays version-agnostic with paths like
+  `"media/slide-1.jpg"`, identical to the pre-versions structure.
+  The sinus-bg `<img>` has no static `src` in the HTML (so it doesn't
+  404 if the version bootstrap fails); JS sets its `src` to
+  `versionPath('media/sinus-bg.svg')` once the version is known and
+  the config script has loaded.
   Missing or invalid `?version=` → the existing on-screen error
   overlay with a message pointing operators at the three
-  `Install App 1 - …` Finder commands. See pitfall #21 for the four
-  places to touch if you add a fourth version.
+  `Install App 1 - …` Finder commands. See pitfall #21 for the seven
+  places to touch if you add a fourth version, and pitfall #22 for
+  why document.write doesn't work for this.
 - **One `.slide` container per slide.** Each carries a `variant-*` class
   (`variant-default` / `variant-large-image` / `variant-text-right` /
   `variant-fullscreen`) that positions the inner image + text. Only one
@@ -713,6 +724,23 @@ The Victron design system file (referenced earlier in the build) is
          is" + the file map at the bottom; README's project tree;
          INSTALL.md §3.3 (install commands + terminal-mode list)
          and the change-control table row.
+22. **App 1: don't use `document.write` to inject the version's
+    `config.js`.** Chrome blocks document.write-inserted scripts on
+    `file://` with `(blocked:origin)` in DevTools' Network tab — each
+    file:// URL is treated as a unique origin in modern Chrome
+    (since ~Chrome 73), and a `document.write('<script src=…>')`
+    fails the same-origin check that a parser-inserted `<script
+    src>` would pass. The first attempt at the version bootstrap
+    used document.write (PR #24, first cut) and visitors saw the
+    error overlay because `window.APP_CONFIG` never populated. The
+    working pattern is: bootstrap creates a `<script>` element via
+    `document.createElement('script')`, sets `.src` and
+    `onload`/`onerror`, appends to `<head>`, and exposes a Promise
+    (`window.__appConfigReady`). The main IIFE is an
+    `async function` that `await`s this Promise before reading
+    `window.APP_CONFIG`. Don't try to switch back to document.write
+    for "simplicity" — the failure mode is silent (overlay shows,
+    no config loaded) and only visible in DevTools Network tab.
 
 ## Useful commands
 
@@ -780,7 +808,7 @@ intersolar-tv-apps/                  # local folder; repo is victron-exhibition-
 ├── Update.command                  # Finder double-click → git pull + restart kiosk
 ├── Update media.command            # Finder double-click → pull content zip + restart
 ├── app1-slideshow/
-│   ├── index.html                  # shared code — bootstrap reads ?version=, document.write's versions/<v>/config.js
+│   ├── index.html                  # shared code — bootstrap reads ?version=, dynamic-script appends versions/<v>/config.js
 │   ├── fonts/museosans-700.ttf     # shared across versions
 │   └── versions/                   # three content versions, identical shape
 │       ├── ess/{config.js, media/}        # ESS — window.APP_CONFIG = { slideshow: {...}, pauseMinutes }
