@@ -945,9 +945,14 @@
 
           // Metadata may not be loaded yet on cold boot or first-visit of a
           // slide. Defer entry until `loadedmetadata` fires; if it doesn't
-          // within SYNC_METADATA_TIMEOUT_MS, fall back to timer mode using
-          // the global default so the ring isn't stuck empty forever.
+          // within SYNC_METADATA_TIMEOUT_MS, fall back to timer mode so the
+          // ring isn't stuck empty forever. The fallback uses
+          // `effectiveAutoAdvanceMs(current)` — i.e. the slide's own
+          // `autoAdvanceMs` if set, otherwise the global default.
           if (!Number.isFinite(dur) || dur <= 0) {
+            // Reset the ring immediately so the previous slide's progress
+            // isn't left visible while we wait for metadata to load.
+            setRingProgress(0);
             let safety;
             const onMeta = () => {
               if (myToken !== countdownToken) return;
@@ -975,7 +980,11 @@
             return;
           }
 
-          setRingProgress(0);
+          // Seed the ring from the video's current position so re-entering
+          // sync mode mid-playback (e.g. on visibilitychange un-hide, or
+          // after the metadata defer resolved) doesn't snap the ring to 0
+          // for one frame before the first rAF tick.
+          setRingProgress(video.currentTime / dur);
 
           const onEnded = () => {
             if (myToken !== countdownToken) return;

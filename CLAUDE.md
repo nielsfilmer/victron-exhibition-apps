@@ -417,8 +417,10 @@ The Victron design system file (referenced earlier in the build) is
   - **Metadata-not-yet-loaded** at slide-enter: defers ring start via
     a one-shot `loadedmetadata` listener, with a 1000 ms safety net
     (`SYNC_METADATA_TIMEOUT_MS`) that falls back to the timer-driven
-    path using the global default if metadata never loads. On cold
-    boot the ring may briefly sit empty before the video starts.
+    path if metadata never loads. The fallback goes through
+    `effectiveAutoAdvanceMs(current)` — slide's own `autoAdvanceMs`
+    if set, otherwise the global default. On cold boot the ring may
+    briefly sit empty before the video starts.
   - **Rapid-navigation safety:** `startCountdown()` captures a
     `countdownToken` integer that `stopCountdown()` increments;
     in-flight rAF ticks, `ended` listeners, and the deferred

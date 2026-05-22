@@ -106,18 +106,18 @@ window.APP_CONFIG = {
           "Drop in any .mp4 / .webm / .ogg — it's auto-detected by extension",
         body: "Videos play immediately when the slide becomes current and pause when it leaves, so nothing runs in the background. Use `loop: false` per slide to play once and stop on the last frame.",
       },
-      // VIDEO slide — muted, looped, plays from frame 0 every time the slide
-      // becomes current and pauses on leave. Layout variants and text fields
-      // work the same as for images. Holds for 15s so a bit more of the
-      // video is seen before advancing.
+      // VIDEO slide — sync-mode. `syncProgressWithVideo: true` ties the
+      // countdown ring to the video's playback (ring fraction =
+      // currentTime / duration) and advances the slide when the video
+      // ends. Pause/resume also pauses/resumes the video. Forces
+      // `loop: false` internally; any `autoAdvanceMs` would be ignored.
       {
         src: "media/sample-video.mp4",
-        autoAdvanceMs: 15000,
         syncProgressWithVideo: true,
         title: "Real-world install footage",
         subtitle:
-          "Drop in any .mp4 / .webm / .ogg — it's auto-detected by extension",
-        body: "Videos play immediately when the slide becomes current and pause when it leaves, so nothing runs in the background. Use `loop: false` per slide to play once and stop on the last frame.",
+          "Ring tracks playback; slide advances when the video ends",
+        body: "Set `syncProgressWithVideo: true` on a video slide to bind the countdown ring to playback. Omit it (or set it to false) to keep the original behaviour — independent timer, video loops in the background.",
       },
       // Default again
       {
