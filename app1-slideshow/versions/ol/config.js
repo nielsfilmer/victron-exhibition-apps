@@ -35,6 +35,12 @@
 //                 "text-right"   → media left, text top-right, sinus bg
 //                 "fullscreen"   → media fills entire screen, no text, no sinus bg
 //               omit `variant` for "default".
+//   objectFit — how the media fills its frame. "cover" crops to fill;
+//                "contain" letterboxes so nothing is cropped (the sinus
+//                pattern shows through the gaps). Applies to images and
+//                videos. Omit to use the variant default — "default" and
+//                "text-right" default to "contain"; "large-image" and
+//                "fullscreen" default to "cover".
 //   title     — leading bold portion of the headline (rendered 100% white)
 //   subtitle  — continuation rendered inline at 80% white
 //   body      — paragraph below the headline. Accepts basic inline HTML

@@ -35,6 +35,12 @@
 //                 "text-right"   → media left, text top-right, sinus bg
 //                 "fullscreen"   → media fills entire screen, no text, no sinus bg
 //               omit `variant` for "default".
+//   objectFit — how the media fills its frame. "cover" crops to fill;
+//                "contain" letterboxes so nothing is cropped (the sinus
+//                pattern shows through the gaps). Applies to images and
+//                videos. Omit to use the variant default — "default" and
+//                "text-right" default to "contain"; "large-image" and
+//                "fullscreen" default to "cover".
 //   title     — leading bold portion of the headline (rendered 100% white)
 //   subtitle  — continuation rendered inline at 80% white
 //   body      — paragraph below the headline. Accepts basic inline HTML
@@ -67,49 +73,56 @@ window.APP_CONFIG = {
   slideshow: {
     images: [
       {
-        src: "media/slide-1.jpg",
+        src: "media/slide-1.png",
+        objectFit: "contain",
         variant: "large-image",
         title: "System optimiser report",
         // subtitle: "Seamless switching between grid, generator and battery",
         body: "Suggests solar and battery upgrades, calculated to increase self-consumption.",
       },
       {
-        src: "media/slide-2.jpg",
+        src: "media/slide-2.png",
+        objectFit: "contain",
         variant: "large-image",
         title: "Dynamic ESS",
         subtitle: "Buying & selling rates",
         body: "The system can check live energy rates every 15 minutes and automatically buy and sell at the right time. It will also show price development throughout the day.",
       },
       {
-        src: "media/slide-3.jpg",
+        src: "media/slide-3.png",
+        objectFit: "contain",
         variant: "large-image",
         title: "Dynamic ESS",
         subtitle: "Energy use overview",
         body: "VRM provides detailed insights into solar, battery, and grid use around the clock, to better understand energy consumption and recognise opportunities for improvement.",
       },
       {
-        src: "media/slide-1.jpg",
+        src: "media/slide-4.png",
+        objectFit: "contain",
         variant: "large-image",
         title: "Dynamic ESS",
         subtitle: "EV charging",
         body: "VRM shows the EV battery's state of charge, so you can set Dynamic ESS to plan a charging schedule based on efficiency and time.",
       },
       {
-        src: "media/slide-2.jpg",
+        src: "media/slide-5.png",
+        objectFit: "contain",
         variant: "large-image",
         title: "Peakshaving",
         // subtitle: "EV charging",
         body: "To avoid overloading a smaller grid connection and paying higher peak rates, VRM lets you set a grid limit. When this limit is reached, the ESS automatically covers demand spikes by drawing on the battery.",
       },
       {
-        src: "media/slide-3.jpg",
+        src: "media/slide-6.png",
+        objectFit: "contain",
         variant: "large-image",
         title: "Backup",
         // subtitle: "EV charging",
         body: "You can change the battery capacity reserved for power outages, to prepare for planned grid maintenance or possible infrastructure damage from bad weather.",
       },
       {
-        src: "media/slide-2.jpg",
+        src: "media/slide-7.png",
+        objectFit: "contain",
         variant: "large-image",
         title: "ESS Click & Design",
         // subtitle: "EV charging",
