@@ -161,7 +161,7 @@
 
       .slide-img-frame {
         position: absolute;
-        overflow: hidden;
+        /* overflow: hidden; */
       }
       .slide-img {
         width: 100%;
@@ -782,6 +782,15 @@
             mediaEl.draggable = false;
             mediaEl.loading = i === 0 ? "eager" : "lazy";
             mediaEl.decoding = "async";
+          }
+          // Per-slide object-fit override (applies to both <img> and <video>,
+          // which share .slide-img). "cover" fills the frame (cropping to fit);
+          // "contain" letterboxes so nothing is cropped and the sinus pattern
+          // shows through the gaps. Set inline so it beats the variant's CSS
+          // default (small variants default to contain, large-image/fullscreen
+          // to cover). Any other/omitted value keeps the variant default.
+          if (s.objectFit === "contain" || s.objectFit === "cover") {
+            mediaEl.style.objectFit = s.objectFit;
           }
           imgFrame.appendChild(mediaEl);
           slideEl.appendChild(imgFrame);

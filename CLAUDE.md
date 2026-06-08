@@ -357,6 +357,16 @@ The Victron design system file (referenced earlier in the build) is
   letterboxed, not cropped — the sinus pattern shows through where
   the image doesn't fill the frame. Don't widen the override to all
   variants without an explicit ask.
+  - **Per-slide `objectFit` override** — a slide may set
+    `objectFit: "contain"` or `"cover"` to override its variant
+    default. The build loop applies it as an **inline style** on the
+    media element (`mediaEl.style.objectFit`), which beats the
+    variant CSS selectors on specificity without needing
+    `!important`. Applies to both `<img>` and `<video>` (they share
+    `.slide-img`). Any other/omitted value leaves the variant
+    default in force, so the CSS above is still the baseline. There's
+    no global object-fit knob — the variant defaults already provide
+    a sensible per-variant baseline; add one only on explicit ask.
 - **Videos use `background: transparent`.** `<video>` has a black
   user-agent default background that bleeds through the letterbox
   bars when the video's aspect doesn't match the frame. Setting
