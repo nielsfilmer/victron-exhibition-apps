@@ -236,7 +236,7 @@
         top: 50%;
         transform: translateY(-50%);
         width: 68.125vw; /* 1308px @ 1920w */
-        height: 49.74vw; /* 955px @ 1920w */
+        height: 51.4vw; /* 955px @ 1920w */
       }
       body.controls-right .slide.variant-large-image .slide-img-frame {
         right: auto;
@@ -701,6 +701,10 @@
           ].filter((s) => s.text);
 
           sections.forEach((sec, secIdx) => {
+            if (secIdx > 0) {
+              // Insert a line break between title and subtitle sections (if both exist)
+              p.appendChild(document.createElement("br"));
+            }
             const words = sec.text.trim().split(/\s+/);
             words.forEach((word, wIdx) => {
               const span = document.createElement("span");
