@@ -22,6 +22,9 @@
 
 # Build / packaging artifacts
 *.zip
+# Output of kiosk/build-zips.sh (the per-app installable bundles; published as
+# GitHub Release assets by CI, never committed)
+dist/
 
 # Kiosk LaunchAgent log files (generated at runtime, not source)
 kiosk/*.out.log

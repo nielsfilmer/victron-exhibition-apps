@@ -823,7 +823,42 @@ kill %1
 # for upload to Google Drive — drag-and-drop replace into the existing
 # "Victron Exhibition Kiosk Apps — User Manual" doc.
 ./kiosk/build-docx.sh
+
+# Build the 5 per-app installable zip bundles into dist/ (app1-{ess,ol,microgrid},
+# app2, app3). Each bundle is a self-contained mini project root an operator can
+# install WITHOUT git: unzip → double-click the bundled "Install ….command".
+# This is the same script CI runs on every push to main to publish the bundles
+# as assets on the rolling "latest" GitHub Release. Runnable locally too.
+./_tools/build-zips.sh
 ```
+
+## Release bundles (App distribution)
+
+- **`_tools/build-zips.sh` is the source of truth** for packaging. It emits
+  five zips into `dist/` — one per kiosk install (`app1-ess`, `app1-ol`,
+  `app1-microgrid`, `app2`, `app3`). Each zip unpacks to a mini project root
+  containing the app's media + the `kiosk/` install machinery + the one
+  `Install ….command` it needs, so the kiosk Mac never needs git or a
+  toolchain. App 1 bundles ship **only their one content version** (install.sh
+  `app1-<v>` references only that version's plist + launch script). Only the
+  App 3 bundle carries `kiosk/bin/` (the relay binary). `update.sh` /
+  `Update.command` are deliberately excluded (git-pull based — meaningless in a
+  zip install; updates come from re-downloading), but `content-update.sh` +
+  `Update media.command` stay (content drops are git-independent).
+- **CI publishes on every push to `main`** via
+  `.github/workflows/build-app-zips.yml`: it runs `_tools/build-zips.sh` and replaces
+  the assets on a **rolling `latest` Release** (the `latest` tag is moved to the
+  newest commit each push). Stable download URLs:
+  `…/releases/latest/download/app2.zip`. Each bundle carries a `VERSION.txt`
+  stamped with the commit SHA so a build is identifiable offline. To switch to
+  a **retained per-version history**, change the workflow trigger to
+  `on: push: tags: ['v*']` and set the release tag to the pushed tag.
+- **TCC gotcha for zip users:** operators must unzip **outside**
+  `~/Downloads`, `~/Documents`, `~/Desktop`, etc. — `install.sh` refuses those
+  paths (pitfall #11). The bundled `READ ME FIRST.txt` says so up front.
+- Uses only the runner's preinstalled `gh` CLI + `GITHUB_TOKEN` (no
+  third-party release action). Build-time internet is fine — the offline
+  constraint is runtime-only.
 
 ## File map (quick orientation)
 
@@ -834,8 +869,11 @@ note at the top); repo on GitHub is `nielsfilmer/victron-exhibition-apps`.
 intersolar-tv-apps/                  # local folder; repo is victron-exhibition-apps
 ├── README.md                       # user-facing app-internals docs
 ├── CLAUDE.md                       # this file — context for Claude
-├── .gitignore                      # excludes .DS_Store, .claude/, *.zip, kiosk logs, app3 profiles
+├── .gitignore                      # excludes .DS_Store, .claude/, *.zip, dist/, kiosk logs, app3 profiles
 ├── .claude/settings.json           # project-scoped permissions (git/gh pr create+review)
+├── .github/workflows/build-app-zips.yml  # CI: on push to main, build 5 bundles → rolling "latest" Release
+├── _tools/build-zips.sh            # builds the 5 per-app installable bundles into dist/ (dev tool + CI)
+├── dist/                           # _tools/build-zips.sh output (gitignored; the 5 installable zips)
 ├── Install App 1 - ESS.command         # Finder double-click → installs App 1 (ESS content)
 ├── Install App 1 - OL.command          # Finder double-click → installs App 1 (OL content)
 ├── Install App 1 - Microgrid.command   # Finder double-click → installs App 1 (Microgrid content)

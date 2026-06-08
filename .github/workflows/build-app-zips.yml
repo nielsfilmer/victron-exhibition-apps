@@ -1,0 +1,53 @@
+name: Build app bundles
+
+# Build the 5 per-app installable zip bundles on every push to main and publish
+# them as assets on a rolling "latest" GitHub Release. Operators download
+# <app>.zip from the Releases page, unzip, and double-click the bundled
+# "Install ….command" — no git checkout needed on the kiosk Mac.
+#
+# Build-time internet (checkout, gh upload) is fine: the project's offline
+# constraint is a RUNTIME one (the kiosk runs from file:// with no network).
+#
+# "Rolling latest" = the `latest` tag/release is moved to the newest commit on
+# each push and its assets are replaced, so the Releases "latest" link always
+# serves the current bundles. To keep a retained, per-version history instead,
+# switch the trigger to `on: push: tags: ['v*']` and set TAG to ${{ github.ref_name }}.
+
+on:
+  push:
+    branches: [main]
+
+# Need write access to create the release + upload assets via GITHUB_TOKEN.
+permissions:
+  contents: write
+
+# A burst of pushes shouldn't race on the single `latest` release; keep only
+# the newest build.
+concurrency:
+  group: build-app-zips
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # shallow checkout is fine: build-zips.sh only needs HEAD's SHA
+
+      - name: Build the 5 bundles
+        run: ./_tools/build-zips.sh
+
+      - name: Publish rolling "latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=latest
+          # Move the rolling release to this commit: delete the old release +
+          # tag, then recreate at the current SHA with the freshly built zips.
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" dist/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "Latest build (${GITHUB_SHA::7})" \
+            --notes "Per-app installable bundles, built automatically from \`main\` @ \`${GITHUB_SHA}\`.
+
+          Each zip unpacks to a self-contained folder — unzip it somewhere under your home folder, then double-click the bundled \"Install ….command\". See \`kiosk/INSTALL.md\` inside any bundle for the full operator manual."

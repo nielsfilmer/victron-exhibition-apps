@@ -45,6 +45,10 @@ intersolar-tv-apps/
 ├── Install App 3.command   # double-click in Finder → install App 3 (4 LaunchAgents)
 ├── Update.command          # double-click in Finder → pull latest code + reload
 ├── Update media.command    # double-click in Finder → download latest content zip (media + config) + reload
+├── .github/workflows/
+│   └── build-app-zips.yml  # CI: on push to main → build 5 installable bundles → rolling "latest" Release
+├── _tools/
+│   └── build-zips.sh       # dev tool + CI: build the 5 per-app installable zip bundles into dist/
 └── kiosk/
     ├── launch-app1.sh                          # shared launcher — takes version as $1
     ├── launch-app1-ess.sh / -ol.sh / -microgrid.sh  # thin wrappers per version
