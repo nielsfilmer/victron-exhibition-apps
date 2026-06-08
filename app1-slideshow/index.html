@@ -303,6 +303,16 @@
         line-height: 1.5;
         color: var(--white);
       }
+      /* Optional inline markup in `body` (see config.js). Sized in vw so it
+         scales linearly 1080p → 4K like everything else. */
+      .slide-text .body ul {
+        margin: 0.5em 0 0;
+        padding-left: 1.2em;
+        list-style: disc;
+      }
+      .slide-text .body li {
+        margin: 0.2em 0;
+      }
 
       /* ===========================================================
      Entry animation — title types in line-by-line, then body fades in
@@ -785,9 +795,13 @@
             textBlock.className = "slide-text";
             if (s.title || s.subtitle) textBlock.appendChild(buildTitle(s));
             if (s.body) {
-              bodyEl = document.createElement("p");
+              // <div> (not <p>) so block-level markup like <ul> nests
+              // validly. innerHTML lets the config author use basic inline
+              // markup (lists, <strong>, <br>); config.js is dev/ops-authored
+              // and loaded from disk, so there's no untrusted-input surface.
+              bodyEl = document.createElement("div");
               bodyEl.className = "body";
-              bodyEl.textContent = s.body;
+              bodyEl.innerHTML = s.body;
               textBlock.appendChild(bodyEl);
             }
             slideEl.appendChild(textBlock);
@@ -903,6 +917,7 @@
         };
 
         let currentMs = 0; // duration of the in-flight countdown; set at startCountdown()
+        let pausedElapsedMs = 0; // timer progress captured at pause, for resume-in-place
 
         const startCountdown = () => {
           stopCountdown();
@@ -917,11 +932,15 @@
         // Timer-driven countdown (the original path). Used for image slides,
         // for non-sync video slides, and as the fallback when a sync-mode
         // slide's metadata never loads within the safety-net window.
-        const startTimerCountdown = () => {
+        // `resumeFromMs` > 0 continues an interrupted countdown from that
+        // elapsed point (manual pause → play) instead of restarting from
+        // empty; the default 0 is a fresh start.
+        const startTimerCountdown = (resumeFromMs = 0) => {
           currentMs = effectiveAutoAdvanceMs(current);
           if (currentMs <= 0) return;
-          countdownStart = performance.now();
-          setRingProgress(0);
+          const offset = Math.min(Math.max(0, resumeFromMs), currentMs);
+          countdownStart = performance.now() - offset;
+          setRingProgress(offset / currentMs);
           const tick = (now) => {
             const elapsed = now - countdownStart;
             const f = elapsed / currentMs;
@@ -1058,14 +1077,22 @@
           if (n === current) return;
           current = n;
           renderSlide(current);
-          if (!isPaused) startCountdown();
+          // Manual navigation (buttons or swipe) always resumes auto-advance:
+          // if paused, un-pause so the countdown resets and plays from the new
+          // slide; otherwise just restart the countdown for the new slide.
+          if (isPaused) setPaused(false);
+          else startCountdown();
         };
         const nextSlide = () => goTo(current + 1);
         const prevSlide = () => goTo(current - 1);
 
         // Pause / resume
-        const setPaused = (paused) => {
+        const setPaused = (paused, opts) => {
           isPaused = !!paused;
+          // keepProgress (manual pause button only) resumes the timer where it
+          // was frozen rather than restarting it. Auto-resume after pauseMinutes
+          // and manual navigation both omit it → fresh countdown.
+          const keepProgress = !!(opts && opts.keepProgress);
           // On sync-mode video slides, the pause button also pauses the
           // video so currentTime stops moving (which is what freezes the
           // ring — the rAF poll reads currentTime). Resume plays the
@@ -1076,7 +1103,18 @@
           const isSyncVideo =
             syncWithVideo[current] && v && v.tagName === "VIDEO";
           if (isPaused) {
-            // Freeze ring at its current position
+            // Freeze ring at its current position. Capture how far a
+            // timer-driven countdown got so a manual resume can pick up from
+            // there. (Sync-mode video slides resume from the video's own
+            // currentTime, so they don't need this snapshot.)
+            if (!isSyncVideo && currentMs > 0 && countdownRAF) {
+              pausedElapsedMs = Math.min(
+                currentMs,
+                performance.now() - countdownStart,
+              );
+            } else {
+              pausedElapsedMs = 0;
+            }
             stopCountdown();
             if (isSyncVideo) {
               try {
@@ -1104,8 +1142,16 @@
               const p = v.play();
               if (p && p.catch) p.catch(() => {});
             }
-            // Spec: after pause expires (or manual unpause), countdown starts over
-            startCountdown();
+            if (keepProgress && !isSyncVideo) {
+              // Manual play after a manual pause: continue the ring from where
+              // it froze. Sync-mode videos fall through to startCountdown(),
+              // which re-seeds the ring from the video's currentTime anyway.
+              stopCountdown();
+              startTimerCountdown(pausedElapsedMs);
+            } else {
+              // Fresh start: auto-resume after pauseMinutes, or sync-mode video.
+              startCountdown();
+            }
           }
         };
 
@@ -1120,7 +1166,9 @@
         });
         pauseBtn.addEventListener("pointerdown", (e) => {
           e.stopPropagation();
-          setPaused(!isPaused);
+          // keepProgress: resuming via the button continues the countdown from
+          // where it was paused rather than restarting it.
+          setPaused(!isPaused, { keepProgress: true });
         });
 
         // Swipe — anywhere on the stage that isn't a control button (those stop

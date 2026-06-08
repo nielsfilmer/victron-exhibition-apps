@@ -37,7 +37,9 @@
 //               omit `variant` for "default".
 //   title     — leading bold portion of the headline (rendered 100% white)
 //   subtitle  — continuation rendered inline at 80% white
-//   body      — paragraph below the headline
+//   body      — paragraph below the headline. Accepts basic inline HTML
+//               (e.g. <ul><li>…</li></ul>, <strong>, <br>) as well as plain
+//               text — the markup is rendered, not shown literally.
 //               (title/subtitle/body are ignored on the fullscreen variant)
 //
 // Top level:
