@@ -64,73 +64,60 @@
 window.APP_CONFIG = {
   slideshow: {
     images: [
-      // Default — image right, text left
       {
         src: "media/slide-1.jpg",
-        title: "Solar energy at scale",
-        subtitle: "Victron MPPT controllers extract every available watt",
-        body: "The intelligent maximum-power-point-tracking algorithm sweeps the array continuously, so partial shading and changing weather never cost you more than they have to.",
+        variant: "large-image",
+        title: "System optimiser report",
+        // subtitle: "Seamless switching between grid, generator and battery",
+        body: "Suggests solar and battery upgrades, calculated to increase self-consumption.",
       },
-      // Large image — image takes most of the screen with rounded corners
       {
         src: "media/slide-2.jpg",
         variant: "large-image",
-        title: "Inverters built to last",
-        subtitle: "Seamless switching between grid, generator and battery",
-        body: "MultiPlus and Quattro inverter/chargers cut over silently in under 20 ms. Pure sine-wave output keeps sensitive electronics running clean.",
+        title: "Dynamic ESS",
+        subtitle: "Buying & selling rates",
+        body: "The system can check live energy rates every 15 minutes and automatically buy and sell at the right time. It will also show price development throughout the day.",
       },
-      // Text right — mirror layout, image left, text right
       {
         src: "media/slide-3.jpg",
-        variant: "text-right",
-        title: "Storage that scales",
-        subtitle: "From a single Lithium Smart battery to a multi-MWh BESS",
-        body: "The same Victron components scale up. Add capacity later without redesigning the system, and keep using the same configuration tools and dashboards.",
+        variant: "large-image",
+        title: "Dynamic ESS",
+        subtitle: "Energy use overview",
+        body: "VRM provides detailed insights into solar, battery, and grid use around the clock, to better understand energy consumption and recognise opportunities for improvement.",
       },
-      // Fullscreen — image fills the entire screen, no text, no sinus background.
-      // Lingers 12s on this slide instead of the global 8s (per-slide override).
       {
-        src: "media/slide-4.jpg",
-        variant: "fullscreen",
-        autoAdvanceMs: 12000,
+        src: "media/slide-1.jpg",
+        variant: "large-image",
+        title: "Dynamic ESS",
+        subtitle: "EV charging",
+        body: "VRM shows the EV battery's state of charge, so you can set Dynamic ESS to plan a charging schedule based on efficiency and time.",
       },
-      // VIDEO slide — muted, looped, plays from frame 0 every time the slide
-      // becomes current and pauses on leave. Layout variants and text fields
-      // work the same as for images. Holds for 15s so a bit more of the
-      // video is seen before advancing.
       {
-        src: "media/sample-video.mp4",
-        autoAdvanceMs: 15000,
-        title: "Real-world install footage",
-        subtitle:
-          "Drop in any .mp4 / .webm / .ogg — it's auto-detected by extension",
-        body: "Videos play immediately when the slide becomes current and pause when it leaves, so nothing runs in the background. Use `loop: false` per slide to play once and stop on the last frame.",
+        src: "media/slide-2.jpg",
+        variant: "large-image",
+        title: "Peakshaving",
+        // subtitle: "EV charging",
+        body: "To avoid overloading a smaller grid connection and paying higher peak rates, VRM lets you set a grid limit. When this limit is reached, the ESS automatically covers demand spikes by drawing on the battery.",
       },
-      // VIDEO slide — sync-mode. `syncProgressWithVideo: true` ties the
-      // countdown ring to the video's playback (ring fraction =
-      // currentTime / duration) and advances the slide when the video
-      // ends. Pause/resume also pauses/resumes the video. Forces
-      // `loop: false` internally; any `autoAdvanceMs` would be ignored.
       {
-        src: "media/sample-video.mp4",
-        syncProgressWithVideo: true,
-        title: "Real-world install footage",
-        subtitle:
-          "Ring tracks playback; slide advances when the video ends",
-        body: "Set `syncProgressWithVideo: true` on a video slide to bind the countdown ring to playback. Omit it (or set it to false) to keep the original behaviour — independent timer, video loops in the background.",
+        src: "media/slide-3.jpg",
+        variant: "large-image",
+        title: "Backup",
+        // subtitle: "EV charging",
+        body: "You can change the battery capacity reserved for power outages, to prepare for planned grid maintenance or possible infrastructure damage from bad weather.",
       },
-      // Default again
       {
-        src: "media/slide-5.jpg",
-        title: "Designed for off-grid life",
-        subtitle: "Reliability when the grid is hundreds of kilometres away",
-        body: "Victron's component-based approach means anything that fails can be swapped on-site — no proprietary modules, no waiting weeks for a return.",
+        src: "media/slide-2.jpg",
+        variant: "large-image",
+        title: "ESS Click & Design",
+        // subtitle: "EV charging",
+        body: "An intuitive online tool that helps to design and make quotes for ESS systems, based on a customer’s grid connection, energy consumption profile, priority and non-priority loads. It simulates system performance over a full year, using actual data.",
       },
     ],
     autoAdvanceMs: 8000,
     transitionMs: 700,
   },
   pauseMinutes: 5,
-  controlsAlign: "right",
+  controlsAlign: "left",
   debug: false,
 };
