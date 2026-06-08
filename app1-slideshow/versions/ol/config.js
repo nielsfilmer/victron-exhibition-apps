@@ -37,7 +37,9 @@
 //               omit `variant` for "default".
 //   title     — leading bold portion of the headline (rendered 100% white)
 //   subtitle  — continuation rendered inline at 80% white
-//   body      — paragraph below the headline
+//   body      — paragraph below the headline. Accepts basic inline HTML
+//               (e.g. <ul><li>…</li></ul>, <strong>, <br>) as well as plain
+//               text — the markup is rendered, not shown literally.
 //               (title/subtitle/body are ignored on the fullscreen variant)
 //
 // Top level:
@@ -64,60 +66,74 @@
 window.APP_CONFIG = {
   slideshow: {
     images: [
-      // Default — image right, text left
       {
         src: "media/slide-1.jpg",
-        title: "Solar energy at scale",
-        subtitle: "Victron MPPT controllers extract every available watt",
-        body: "The intelligent maximum-power-point-tracking algorithm sweeps the array continuously, so partial shading and changing weather never cost you more than they have to.",
+        variant: "large-image",
+        title: "Opportunity Loads",
+        subtitle: "How it works",
+        body: "Once all loads are powered and the battery is sufficiently charged, the Opportunity Loads function directs surplus solar to devices that don't need to run at a specific moment.",
       },
-      // Large image — image takes most of the screen with rounded corners
       {
         src: "media/slide-2.jpg",
         variant: "large-image",
-        title: "Inverters built to last",
-        subtitle: "Seamless switching between grid, generator and battery",
-        body: "MultiPlus and Quattro inverter/chargers cut over silently in under 20 ms. Pure sine-wave output keeps sensitive electronics running clean.",
+        title: "Opportunity Loads",
+        subtitle: "Examples",
+        body: "Typical examples of Opportunity Loads include: <ul><li>Thermal buffering</li><li>Running circulation or pool pumps</li><li>EV Charging</li><li>E-scooter charging via Shelly Plug</li><li>Smart Grid heat pump control</li><li>EEBUS heat pump energy metering</li></ul>",
       },
-      // Text right — mirror layout, image left, text right
       {
         src: "media/slide-3.jpg",
-        variant: "text-right",
-        title: "Storage that scales",
-        subtitle: "From a single Lithium Smart battery to a multi-MWh BESS",
-        body: "The same Victron components scale up. Add capacity later without redesigning the system, and keep using the same configuration tools and dashboards.",
+        variant: "large-image",
+        title: "Opportunity Loads",
+        subtitle: "Devices",
+        body: "Surplus solar energy can be directed to devices in a particular order, based on its availability.",
       },
-      // Fullscreen — image fills the entire screen, no text, no sinus background.
-      // Lingers 12s on this slide instead of the global 8s (per-slide override).
       {
-        src: "media/slide-4.jpg",
-        variant: "fullscreen",
-        autoAdvanceMs: 12000,
+        src: "media/slide-1.jpg",
+        variant: "large-image",
+        title: "Opportunity Loads",
+        subtitle: "Works with Shelly",
+        body: "The Opportunity Loads function allows Victron GX products to automatically control loads connected to Shelly devices.",
       },
-      // VIDEO slide — muted, looped, plays from frame 0 every time the slide
-      // becomes current and pauses on leave. Layout variants and text fields
-      // work the same as for images. Holds for 15s so a bit more of the
-      // video is seen before advancing.
       {
-        src: "media/sample-video.mp4",
-        autoAdvanceMs: 15000,
-        title: "Real-world install footage",
-        subtitle:
-          "Drop in any .mp4 / .webm / .ogg — it's auto-detected by extension",
-        body: "Videos play immediately when the slide becomes current and pause when it leaves, so nothing runs in the background. Use `loop: false` per slide to play once and stop on the last frame.",
+        src: "media/slide-2.jpg",
+        variant: "large-image",
+        title: "Opportunity Loads",
+        subtitle: "Shelly data readout",
+        body: "Shelly devices double as energy meters and their consumption data is shown in Venus OS.",
       },
-      // Default again
       {
-        src: "media/slide-5.jpg",
-        title: "Designed for off-grid life",
-        subtitle: "Reliability when the grid is hundreds of kilometres away",
-        body: "Victron's component-based approach means anything that fails can be swapped on-site — no proprietary modules, no waiting weeks for a return.",
+        src: "media/slide-3.jpg",
+        variant: "large-image",
+        title: "Opportunity Loads",
+        subtitle: "Smart Grid-ready",
+        body: "The Opportunity Loads function can communicate directly with SG-ready heat pumps, to optimise the use of surplus solar based on grid load.",
+      },
+      {
+        src: "media/slide-1.jpg",
+        variant: "large-image",
+        title: "Opportunity Loads",
+        subtitle: "EEBUS-ready",
+        body: "As Victron firmly believes in open-source protocols, Opportunity Loads has been designed to work with the EEBUS communication standard. It allows data readout and, at a later stage, heat pump management, regardless of manufacturer.",
+      },
+      {
+        src: "media/slide-2.jpg",
+        variant: "large-image",
+        title: "Opportunity Loads",
+        subtitle: "SolarSense 750-ready",
+        body: "In a future release, the software will activate additional loads based on live data from our SolarSense 750 wireless irradiation sensor. This ensures a more efficient use of surplus solar, while the battery still reaches full charge.",
+      },
+      {
+        src: "media/slide-3.jpg",
+        variant: "large-image",
+        title: "Opportunity Loads",
+        subtitle: "Future-proof",
+        body: "Besides supporting the SG Ready and EEBUS protocols, Opportunity Loads is undergoing further development to integrate with Node-RED. It also builds on the S2 communication standard for energy flexibility.",
       },
     ],
     autoAdvanceMs: 8000,
     transitionMs: 700,
   },
   pauseMinutes: 5,
-  controlsAlign: "right",
+  controlsAlign: "left",
   debug: false,
 };
