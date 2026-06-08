@@ -186,7 +186,19 @@ plus scripts that boot a Mac into any of them in Chrome kiosk mode.
   ws-relay binary, and `kiosk/app3-displays.env` are NEVER touched**
   by content-update — those belong to dev / ops, not the content
   team. After replacing, deletes the temp extraction and
-  `kickstart -k`-restarts any loaded LaunchAgent.
+  `kickstart -k`-restarts any loaded LaunchAgent. The downloaded zip
+  + extraction live in a `mktemp -d` dir under `$TMPDIR`
+  (`/var/folders/…/T/content-update.XXXXXX/`), deleted by the EXIT
+  trap on every exit. Pass `--keep` (alias `--debug`) to preserve
+  that temp dir and print its path instead — for inspecting exactly
+  what the content team shipped without it touching disk permanently.
+  Extraction tolerates `unzip` exit codes 0/1/2 (only >= 3 is fatal):
+  a Dropbox "download folder as .zip" archive carries a spurious
+  top-level `/` entry, so `unzip` strips it ("stripped absolute path
+  spec from /") and returns exit **2** even though every real file
+  extracted. The old `if ! unzip` treated that as failure and
+  rejected valid Dropbox zips with "Extraction failed — …not a valid
+  zip"; don't revert to a bare non-zero check.
   The URL parsing is a pure-bash read loop (NOT `grep | head`) on
   purpose — `set -o pipefail` would kill the script when grep
   finds no matches (i.e. the file ships with only comments), and
