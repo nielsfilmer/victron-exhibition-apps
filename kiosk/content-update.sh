@@ -4,7 +4,11 @@
 # new content.
 #
 # Usage:
-#   ./kiosk/content-update.sh
+#   ./kiosk/content-update.sh            # download + apply, then auto-delete temp
+#   ./kiosk/content-update.sh --keep     # same, but DON'T delete the temp dir —
+#                                        # leaves the downloaded zip + extracted
+#                                        # files on disk and prints the path so
+#                                        # you can inspect them. --debug is an alias.
 #
 # Workflow:
 #   1. Read the zip URL from kiosk/content-url.txt
@@ -48,6 +52,40 @@ red()    { printf '\033[31m%s\033[0m\n' "$*"; }
 green()  { printf '\033[32m%s\033[0m\n' "$*"; }
 yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
 
+# 0. Parse options. --keep / --debug preserves the temp dir (downloaded zip +
+#    extracted files) for inspection instead of deleting it on exit.
+KEEP=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --keep|--debug) KEEP=1 ;;
+    -h|--help)
+      echo "Usage: $0 [--keep|--debug]"
+      echo "  --keep / --debug   keep the temp dir (zip + extracted files) and print its path"
+      exit 0 ;;
+    *)
+      red "✖ Unknown option: $1"
+      echo "  Usage: $0 [--keep|--debug]"
+      exit 1 ;;
+  esac
+  shift
+done
+
+# Temp-dir cleanup. Wired to the EXIT trap below (after $TMP exists). With
+# --keep we leave it in place and tell the operator where to find it / how to
+# remove it; otherwise it's deleted on every exit, success or failure.
+cleanup() {
+  if [[ "$KEEP" -eq 1 ]]; then
+    echo
+    yellow "→ --keep: temp dir left in place for inspection:"
+    echo "    dir : $TMP"
+    echo "    zip : $TMP/content.zip"
+    echo "    ext : $TMP/unzipped/"
+    echo "    Remove it when done:  rm -rf \"$TMP\""
+  else
+    rm -rf "$TMP"
+  fi
+}
+
 # 1. Read the URL (first non-blank, non-comment line).
 #    Done with a pure-bash read loop on purpose — a `grep -v … | head` pipeline
 #    is killed by `set -o pipefail` when grep finds no matches (i.e. the file
@@ -88,9 +126,10 @@ case "$URL" in
     exit 1 ;;
 esac
 
-# 3. Make a temp dir + auto-clean on exit
+# 3. Make a temp dir + clean on exit (unless --keep — see cleanup()).
 TMP="$(mktemp -d -t content-update.XXXXXX)"
-trap 'rm -rf "$TMP"' EXIT
+trap cleanup EXIT
+[[ "$KEEP" -eq 1 ]] && yellow "→ --keep set: temp dir will be preserved at $TMP"
 
 ZIP="$TMP/content.zip"
 yellow "→ Downloading content package…"
@@ -104,12 +143,25 @@ fi
 ZIP_BYTES="$(stat -f%z "$ZIP" 2>/dev/null || stat -c%s "$ZIP")"
 green "✓ Downloaded $(printf '%.1f MB' "$(echo "$ZIP_BYTES / 1024 / 1024" | bc -l)")."
 
-# 4. Unzip
+# 4. Unzip.
+#    unzip exit codes: 0 = clean, 1 = minor warnings, 2 = a zipfile-format
+#    quirk it worked around — ALL THREE still extract the files. Only codes
+#    >= 3 are genuine failures. We must distinguish these: a Dropbox "download
+#    folder as zip" archive carries a spurious top-level "/" entry, which makes
+#    unzip strip it ("stripped absolute path spec from /") and return exit 2
+#    even though every real file extracted. Treating any non-zero as fatal (the
+#    old `if ! unzip`) rejected those perfectly-good Dropbox zips.
 yellow "→ Extracting…"
 mkdir -p "$TMP/unzipped"
-if ! unzip -q "$ZIP" -d "$TMP/unzipped"; then
-  red "✖ Extraction failed — the downloaded file may not be a valid zip."
+unzip_rc=0
+unzip -q "$ZIP" -d "$TMP/unzipped" || unzip_rc=$?
+if [[ "$unzip_rc" -gt 2 ]]; then
+  red "✖ Extraction failed — the downloaded file may not be a valid zip (unzip exit $unzip_rc)."
   exit 1
+fi
+if [[ "$unzip_rc" -ne 0 ]]; then
+  yellow "  (unzip exit $unzip_rc — non-fatal warnings, e.g. a stray top-level"
+  yellow "   entry in a Dropbox folder zip; the files extracted fine. Continuing.)"
 fi
 
 # 5. Locate a given path inside the extracted tree. Accepts either flat
@@ -247,5 +299,7 @@ else
   echo "  but no running kiosk to refresh."
 fi
 
-# The EXIT trap deletes $TMP — the downloaded zip + everything that was
-# in it except the media + config.js files we copied into PROJECT_DIR.
+# The EXIT trap runs cleanup(): it deletes $TMP — the downloaded zip +
+# everything that was in it except the media + config.js files we copied into
+# PROJECT_DIR — UNLESS --keep was passed, in which case it's left in place and
+# its path is printed for inspection.
