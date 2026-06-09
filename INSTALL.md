@@ -42,14 +42,11 @@ You download **one** zip per kiosk. Pick the one you need:
 The same files always live at stable links, if you prefer to download
 directly:
 
-- `…/releases/latest/download/app1-ess.zip`
-- `…/releases/latest/download/app1-ol.zip`
-- `…/releases/latest/download/app1-microgrid.zip`
-- `…/releases/latest/download/app2.zip`
-- `…/releases/latest/download/app3.zip`
-
-(Prefix each with
-`https://github.com/nielsfilmer/victron-exhibition-apps`.)
+- <https://github.com/nielsfilmer/victron-exhibition-apps/releases/latest/download/app1-ess.zip>
+- <https://github.com/nielsfilmer/victron-exhibition-apps/releases/latest/download/app1-ol.zip>
+- <https://github.com/nielsfilmer/victron-exhibition-apps/releases/latest/download/app1-microgrid.zip>
+- <https://github.com/nielsfilmer/victron-exhibition-apps/releases/latest/download/app2.zip>
+- <https://github.com/nielsfilmer/victron-exhibition-apps/releases/latest/download/app3.zip>
 
 Each zip is stamped with the exact build it came from — see
 `VERSION.txt` inside the unzipped folder if you ever need to confirm
@@ -125,13 +122,17 @@ only for the developer Git-based install.
 When the content team sends a refreshed media package (a single zip
 URL), you don't need to reinstall the whole app:
 
-1. Open `kiosk/content-url.txt` in any text editor, paste the URL the
-   content team gave you on a blank line, and save. (One-time per show.)
+1. Open `kiosk/content-url.txt` in any text editor. The file already
+   has one URL on its **last line** — **replace that URL** with the new
+   one the content team gave you (keep it on a single line, no quotes),
+   and save. Don't add the new URL on an extra line: the kiosk uses the
+   *first* URL it finds, so a leftover old line would win. (Lines
+   starting with `#` are comments and are ignored.)
 2. Double-click **`Update media.command`** in the app folder.
 
 It downloads the package, swaps in the new media and settings, and
-restarts the kiosk. The screen goes briefly black, then shows the new
-content. Nothing else (the app code, fonts, layout) is touched.
+restarts the kiosk (the screen blinks during the restart), then shows
+the new content. Nothing else (the app code, fonts, layout) is touched.
 
 > **Rolling back a bad content drop** and other content-team details
 > are covered in [`kiosk/INSTALL.md` §4](./kiosk/INSTALL.md#4-updating-content-during-a-show).
@@ -170,7 +171,7 @@ delete the app folder if you no longer need it.
 
 ---
 
-## Something went wrong?
+## 5. If something goes wrong
 
 The most common issues and their fixes — kiosk doesn't appear, "Restore
 session?" prompt, screens out of sync, "Operation not permitted" in a
