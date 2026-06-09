@@ -890,6 +890,7 @@ note at the top); repo on GitHub is `nielsfilmer/victron-exhibition-apps`.
 ```
 intersolar-tv-apps/                  # local folder; repo is victron-exhibition-apps
 ├── README.md                       # user-facing app-internals docs
+├── INSTALL.md                      # client-facing zip-download install/update/remove guide (kiosk/INSTALL.md is the full ops manual)
 ├── CLAUDE.md                       # this file — context for Claude
 ├── .gitignore                      # excludes .DS_Store, .claude/, *.zip, dist/, kiosk logs, app3 profiles
 ├── .claude/settings.json           # project-scoped permissions (git/gh pr create+review)

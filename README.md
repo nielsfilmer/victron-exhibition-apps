@@ -38,6 +38,7 @@ intersolar-tv-apps/
 │   ├── index.html
 │   ├── config.js
 │   └── media/           # slide-N-{left,middle,right}.jpg
+├── INSTALL.md             # client-facing zip-download install/update/remove guide (root); kiosk/INSTALL.md is the full manual
 ├── Install App 1 - ESS.command         # double-click in Finder → install App 1 (ESS content)
 ├── Install App 1 - OL.command          # double-click in Finder → install App 1 (OL content)
 ├── Install App 1 - Microgrid.command   # double-click in Finder → install App 1 (Microgrid content)
