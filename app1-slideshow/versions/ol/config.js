@@ -152,3 +152,4 @@ window.APP_CONFIG = {
   controlsAlign: "left",
   debug: false,
 };
+
