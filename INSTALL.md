@@ -107,6 +107,11 @@ Chrome is ever closed.
 
 ## 3. Update
 
+> **Already running fullscreen on the kiosk Mac?** A double-click or
+> Terminal step needs Finder, which the fullscreen kiosk covers. Leave
+> kiosk mode first — see
+> [section 4](#4-update-the-mac-while-its-running-in-kiosk-mode).
+
 ### App update (new code or features)
 
 These zip installs update by **re-downloading**:
@@ -139,7 +144,80 @@ the new content. Nothing else (the app code, fonts, layout) is touched.
 
 ---
 
-## 4. Remove
+## 4. Update the Mac while it's running in kiosk mode
+
+Once a kiosk is installed, the Mac boots straight into fullscreen Chrome
+with no visible way out. To update it — a new app version, a content
+drop, or a macOS update — you briefly leave kiosk mode, do the work, and
+let it return. You'll need a **keyboard** connected to the Mac.
+
+> This only **pauses** the kiosk — it stays installed and comes back on
+> the next reboot. To remove it for good instead, see
+> [section 5](#5-remove).
+
+### Step 1 — Leave kiosk mode
+
+The kiosk relaunches Chrome automatically about 10 seconds after it's
+closed, so to get a stable desktop you pause it first:
+
+1. Open **Terminal**: press **⌘ + Space**, type `Terminal`, press
+   **Enter**. (If the kiosk swallows that shortcut, press
+   **⌘ + ⌥ + Esc**, choose **Google Chrome → Force Quit** to reveal the
+   desktop, then open Terminal within a few seconds.)
+2. Pause the kiosk so Chrome stops relaunching:
+
+   ```bash
+   launchctl unload ~/Library/LaunchAgents/com.intersolar.<label>.plist
+   ```
+
+   Use the label for the app that's installed:
+
+   | App | Label(s) — unload each one |
+   |---|---|
+   | App 1 — ESS | `com.intersolar.app1-ess` |
+   | App 1 — OL | `com.intersolar.app1-ol` |
+   | App 1 — Microgrid | `com.intersolar.app1-microgrid` |
+   | App 2 | `com.intersolar.app2` |
+   | App 3 | `com.intersolar.app3-ws`, `com.intersolar.app3-center`, `com.intersolar.app3-left`, `com.intersolar.app3-right` (all four) |
+
+3. If Chrome is still on screen, close it with **⌘ + ⌥ + Esc → Google
+   Chrome → Force Quit**. You now have a normal desktop, and the kiosk
+   stays down until you bring it back.
+
+### Step 2 — Do the update
+
+- **Update the app or its content:** follow [section 3](#3-update) —
+  download a newer zip and re-run the install command, or run
+  `Update media.command`. (Re-running an install command also re-arms
+  auto-start, so you can go straight to Step 3 and reboot.)
+- **Update macOS:** open **System Settings → General → Software Update →
+  Update Now** and let it finish, including any reboot it asks for.
+
+### Step 3 — Run the kiosk regularly again
+
+The kiosk is set to start automatically on every login, so the simplest
+way to bring it back — and keep it coming back on every power-on — is to
+**reboot the Mac**. It auto-logs in and the kiosk returns fullscreen on
+its own.
+
+If you'd rather not reboot, re-arm it from the same Terminal:
+
+```bash
+launchctl load -w ~/Library/LaunchAgents/com.intersolar.<label>.plist
+```
+
+(For App 3, load all four labels from the table above — rebooting is
+easier.)
+
+> **There's no automatic or scheduled update** — every update is run by
+> hand using the steps above. The kiosk's *own* restart, however, is
+> permanent once armed: it relaunches on every boot, and within about 10
+> seconds if Chrome is ever closed. So after one reboot you're back to a
+> hands-off kiosk that runs itself.
+
+---
+
+## 5. Remove
 
 Removing an app stops it from auto-starting. This step uses **Terminal**
 (there's no double-click uninstaller).
@@ -171,7 +249,7 @@ delete the app folder if you no longer need it.
 
 ---
 
-## 5. If something goes wrong
+## 6. If something goes wrong
 
 The most common issues and their fixes — kiosk doesn't appear, "Restore
 session?" prompt, screens out of sync, "Operation not permitted" in a
