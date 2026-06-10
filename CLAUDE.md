@@ -570,6 +570,13 @@ The Victron design system file (referenced earlier in the build) is
 - **`debug: true`** restores the cursor (same as App 1/2) AND shows
   a top-left HUD with role / WS state / current slide / last applied
   ts. Useful for verifying the sync flow during setup.
+- **Cursor is parked at launch, not just hidden by CSS.** Because
+  App 3 has zero visitor interaction, the universal `cursor: none`
+  rule never gets the pointer event Chrome needs to apply it, so the
+  three Chrome launchers warp the cursor to the far corner before
+  `exec` (`CGWarpMouseCursorPosition` via `osascript`). See pitfall
+  #23 for the full rationale and why a synthetic event / TCC grant
+  was rejected.
 
 ## kiosk/ws-relay/ (App 3 sync relay)
 
@@ -799,6 +806,33 @@ The Victron design system file (referenced earlier in the build) is
     `window.APP_CONFIG`. Don't try to switch back to document.write
     for "simplicity" — the failure mode is silent (overlay shows,
     no config loaded) and only visible in DevTools Network tab.
+23. **App 3: the cursor must be parked at launch — `cursor: none`
+    alone isn't enough on a no-interaction kiosk.** App 3's CSS hides
+    the cursor with the same universal `*, *::before, *::after {
+    cursor: none; }` rule as App 1 / App 2 (pitfall #12), and with
+    `debug: false` nothing in the page re-shows it. But Chrome only
+    *applies* `cursor: none` to the rendered cursor in response to a
+    real pointer event over the page. App 1 and App 2 are touch apps —
+    every visitor tap fires the pointer event that engages it. App 3
+    is display-only ("no on-screen controls, no visitor interaction"),
+    so the OS arrow that happened to be on screen when the `--kiosk`
+    window launched just sits there frozen — the classic kiosk
+    "cursor stuck in the middle of the screen" symptom. A synthetic JS
+    `mousemove` can't fix it (it doesn't move the real OS cursor). The
+    fix lives in the three Chrome launchers
+    (`launch-app3-{center,left,right}.sh`): just before `exec`, an
+    `osascript -l JavaScript` one-liner calls
+    `CGWarpMouseCursorPosition` to warp the pointer to (999999,999999),
+    which clamps to the far bottom-right corner of the display union.
+    `CGWarpMouseCursorPosition` only repositions — it posts no event —
+    so it needs **no Accessibility/TCC grant** (unlike `CGEventPost`,
+    which would be needed to fully engage `cursor: none` and which
+    *does* require a TCC grant — rejected for the silent-prompt reason
+    in pitfall #11). The call is synchronous, so unlike pitfall #15's
+    `caffeinate` it leaves no orphan. Trade-off accepted by the user: a
+    single 1 px arrow remains in that corner — invisible at kiosk
+    viewing distance, not a true hide. Don't "simplify" by dropping the
+    warp; the cursor comes back center-screen.
 
 ## Useful commands
 

@@ -35,6 +35,20 @@ if [[ -f "$PREFS" ]]; then
   /usr/bin/sed -i '' 's/"exited_cleanly":false/"exited_cleanly":true/; s/"exit_type":"Crashed"/"exit_type":"Normal"/' "$PREFS" || true
 fi
 
+# Park the mouse pointer in the far bottom-right corner before Chrome
+# takes over. App 3 has no visitor interaction, so Chrome's CSS
+# `cursor: none` never gets the pointer-move it needs to engage, and a
+# stray arrow would otherwise sit frozen on the slides (see CLAUDE.md
+# pitfall #23). CGWarpMouseCursorPosition only repositions the cursor —
+# it posts no event — so it needs NO Accessibility/TCC grant and runs
+# prompt-free on a fresh kiosk Mac. Synchronous (not backgrounded), so
+# unlike the caffeinate in pitfall #15 it leaves no orphan process.
+# (999999,999999) clamps to the outermost corner of the display union —
+# the least-visible resting spot (a single 1 px arrow remains there).
+/usr/bin/osascript -l JavaScript \
+  -e 'ObjC.import("CoreGraphics"); $.CGWarpMouseCursorPosition($.CGPointMake(999999, 999999))' \
+  2>/dev/null || true
+
 exec "$CHROME" \
   --kiosk \
   --window-position=${LEFT_X},${LEFT_Y} \
