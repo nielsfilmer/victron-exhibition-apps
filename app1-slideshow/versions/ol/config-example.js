@@ -62,6 +62,10 @@
 //                              When set to "right", the `large-image` variant
 //                              auto-flips its image to the left edge so the
 //                              controls don't sit on top of it.
+//   imageZoom                — `true` (default) plays the scale-in (Ken Burns)
+//                              entry animation as each slide's media becomes
+//                              current. Set `false` to disable it for this
+//                              version — media just crossfades, no scaling.
 //   debug                    — `false` (default) is the kiosk behaviour.
 //                              `true` adds `body.debug` to the document,
 //                              which today restores the native mouse cursor
