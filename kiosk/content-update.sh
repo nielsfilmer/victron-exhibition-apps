@@ -217,6 +217,7 @@ for app in "${APPS[@]}"; do
     # Copy contents (the dot-slash form preserves dotfiles + avoids
     # nesting the source folder name).
     cp -R "$SRC"/. "$DEST"/
+    touch "$DEST/.gitkeep"   # keep the tracked folder marker after a content drop
     REPLACED_MEDIA=$((REPLACED_MEDIA + 1))
     app_touched=1
   fi
