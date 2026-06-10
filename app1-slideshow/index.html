@@ -189,6 +189,18 @@
         opacity: 1;
         transform: scale(1);
       }
+      /* Opt out of the scale-in (Ken Burns) entry via `imageZoom: false` in
+     config. The opacity crossfade is preserved; only the scale is
+     neutralised, in both the entering and current states. The transform
+     transition + its `will-change` hint are also dropped so the kiosk
+     doesn't reserve a compositor layer for a property that never animates
+     here. */
+      body.no-zoom .slide-img,
+      body.no-zoom .slide.is-current .slide-img {
+        transform: none;
+        transition: opacity var(--transition-ms) var(--ease);
+        will-change: opacity;
+      }
       /* Small-image variants letterbox rather than crop, so the sinus pattern
      shows through where the image doesn't fill the frame. */
       .slide.variant-default .slide-img,
@@ -679,6 +691,11 @@
         // testing without a touchscreen. Must be `true` to enable; any other
         // value (including missing) keeps the kiosk cursor-free.
         if (cfg.debug === true) document.body.classList.add("debug");
+
+        // Image zoom — the scale-in (Ken Burns) entry animation. Defaults on;
+        // set `imageZoom: false` in config to disable it for this version.
+        // Any other value (including missing) keeps the zoom.
+        if (cfg.imageZoom === false) document.body.classList.add("no-zoom");
 
         document.documentElement.style.setProperty(
           "--transition-ms",

@@ -472,6 +472,17 @@ The Victron design system file (referenced earlier in the build) is
   tracking. Threshold: `max(60px, 4% of viewport width)`, max duration
   600 ms, requires `|dx| > 1.2 × |dy|`. Control buttons stop
   propagation so a tap on a button doesn't arm a swipe.
+- **`imageZoom` global config** — `true` (default) plays the
+  scale-in (Ken Burns) entry animation on `.slide-img`
+  (`scale(1.02)` → `scale(1)` as a slide becomes current). JS reads
+  it once at boot and adds `body.no-zoom` only when explicitly set
+  to `false`; a sibling CSS rule then forces `transform: none` on
+  `.slide-img` in both the entering and current states, so media
+  just crossfades with no scaling. The opacity crossfade is
+  unaffected. Default-on means `ess`/`ol` (which omit the flag) keep
+  the zoom; only `microgrid` opts out today. It's a single
+  class-driven CSS override — don't reach for per-slide knobs unless
+  explicitly asked.
 - **`debug` global config** — `false` (default) hides the mouse
   cursor everywhere via the universal `*` rule (see pitfall #12).
   `true` adds `body.debug`, which a sibling CSS rule keys off to
