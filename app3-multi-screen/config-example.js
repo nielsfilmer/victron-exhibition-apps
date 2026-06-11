@@ -37,6 +37,11 @@
 //   slideshow.autoAdvanceMs  — how long each slide stays before the
 //                              center auto-advances (default 8000).
 //   slideshow.transitionMs   — slide crossfade duration (default 700).
+//   imageZoom                — `true` (default) plays the scale-in (Ken Burns)
+//                              entry animation as each slide's media becomes
+//                              current. Set `false` to disable it — media just
+//                              crossfades, no scaling (same flag + behaviour as
+//                              App 1).
 //   debug                    — `false` (default) is the kiosk behaviour.
 //                              `true` adds `body.debug` to the document,
 //                              which restores the native mouse cursor
@@ -66,6 +71,7 @@ window.APP_CONFIG = {
     autoAdvanceMs: 8000,
     transitionMs: 700,
   },
+  imageZoom: true,
   debug: false,
   wsUrl: "ws://127.0.0.1:8743/ws",
 };
