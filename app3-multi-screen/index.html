@@ -90,6 +90,18 @@
     will-change: opacity, transform;
   }
   .slide.is-current .slide-media { opacity: 1; transform: scale(1); }
+  /* Opt out of the scale-in (Ken Burns) entry via `imageZoom: false` in
+     config. The opacity crossfade is preserved; only the scale is
+     neutralised, in both the entering and current states. The transform
+     transition + its `will-change` hint are also dropped so the kiosk
+     doesn't reserve a compositor layer for a property that never animates
+     here. Matches App 1's behaviour. */
+  body.no-zoom .slide-media,
+  body.no-zoom .slide.is-current .slide-media {
+    transform: none;
+    transition: opacity var(--transition-ms) var(--ease);
+    will-change: opacity;
+  }
 
   /* ===========================================================
      Debug HUD — top-left, only visible when `debug: true`. Shows
@@ -180,6 +192,10 @@
   const autoAdvanceMs = (typeof ss.autoAdvanceMs === 'number') ? ss.autoAdvanceMs : 8000;
 
   if (cfg.debug === true) document.body.classList.add('debug');
+
+  // Default-on Ken Burns scale-in; opt out per config with `imageZoom: false`
+  // (same flag + behaviour as App 1). Only the explicit `false` disables it.
+  if (cfg.imageZoom === false) document.body.classList.add('no-zoom');
 
   // config.js is the single source of truth for wsUrl — no fallback
   // here, so the port lives in exactly one place. If an operator
